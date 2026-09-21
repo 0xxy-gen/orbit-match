@@ -1,0 +1,17 @@
+{
+  "name": "orbit-match",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OrbitMatch — a marketplace matching satellites that need a launch with providers that sell one",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
