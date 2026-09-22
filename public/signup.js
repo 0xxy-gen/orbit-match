@@ -1,4 +1,11 @@
 import { COMPANY_SIZES, INTENTS, SATELLITE_BANDS } from './options.js';
+import { validateSignup } from './validate.js';
+
+// Demo setting. false: fields turn red as you leave them, but the button still
+// goes through, so the flow can be walked without typing. true: the button
+// stops on the first problem, which is how it should behave once a server is
+// behind it (and the server has to check the same things again regardless).
+const ENFORCE_ON_SUBMIT = false;
 
 const form = document.getElementById('signup');
 const submit = form.querySelector('.submit');
@@ -89,32 +96,28 @@ form.addEventListener('input', event => {
   if (FIELD_ORDER.includes(name)) setError(name, '');
 });
 
-form.addEventListener('submit', async event => {
+const readForm = () => {
+  const data = Object.fromEntries(new FormData(form));
+  data.privacy = form.privacy.checked;
+  return data;
+};
+
+// Leaving a field checks that one field, so a problem shows where it happened
+// rather than all at once at the end.
+form.addEventListener('focusout', event => {
+  const name = event.target.name;
+  if (!FIELD_ORDER.includes(name)) return;
+  if (form.contains(event.relatedTarget) && event.relatedTarget?.name === name) return;
+  setError(name, validateSignup(readForm()).fields[name] ?? '');
+});
+
+form.addEventListener('submit', event => {
   event.preventDefault();
   clearErrors();
 
-  const data = Object.fromEntries(new FormData(form));
-  data.privacy = form.privacy.checked;
-
-  const submitText = submit.querySelector('.submit-text');
-  submit.disabled = true;
-  submitText.textContent = 'Creating account…';
-  try {
-    const res = await fetch('/api/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (res.ok) return showSuccess(body.account);
-    if (body.fields) return showErrors(body.fields);
-    formError.textContent = body.error || 'Something went wrong. Try again.';
-  } catch {
-    formError.textContent = 'Could not reach OrbitMatch. Check your connection and try again.';
-  } finally {
-    submit.disabled = false;
-    submitText.textContent = 'Create account';
-  }
+  const { values, fields } = validateSignup(readForm());
+  if (ENFORCE_ON_SUBMIT && Object.keys(fields).length) return showErrors(fields);
+  showSuccess(ENFORCE_ON_SUBMIT ? values : readForm());
 });
 
 function showSuccess(account) {
@@ -127,23 +130,40 @@ function showSuccess(account) {
       <svg viewBox="0 0 24 24" width="26" height="26"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <h2></h2>
-    <p class="muted">Your account has been created.</p>
+    <p class="muted">Here is what you entered.</p>
     <dl class="summary"></dl>
-    <a class="submit" href="/signup">Create another account</a>`;
+    <a class="submit" href="/home.html">Open OrbitMatch</a>
+    <a class="submit secondary" href="/signup.html">Start again</a>
+    <p class="prototype-note">Prototype — no account was created and nothing was saved.</p>`;
 
-  card.querySelector('h2').textContent = `Welcome to OrbitMatch, ${account.firstName}`;
+  const name = [account.firstName, account.lastName].filter(Boolean).join(' ').trim();
+  card.querySelector('h2').textContent = account.firstName
+    ? `Welcome to OrbitMatch, ${account.firstName}`
+    : 'Welcome to OrbitMatch';
+
   const summary = card.querySelector('.summary');
-  for (const [term, detail] of [
-    ['Name', `${account.firstName} ${account.lastName}`],
+  const rows = [
+    ['Name', name],
     ['Work email', account.email],
     ['Company', account.companyName],
-    ['Account type', intent?.title ?? account.intent],
-  ]) {
+    ['Account type', intent?.title],
+  ].filter(([, detail]) => detail);
+
+  for (const [term, detail] of rows) {
     const row = document.createElement('div');
     row.append(Object.assign(document.createElement('dt'), { textContent: term }),
       Object.assign(document.createElement('dd'), { textContent: detail }));
     summary.append(row);
   }
+  if (!rows.length) {
+    summary.remove();
+    card.querySelector('.muted').textContent = 'You left the form blank, which is fine here.';
+  }
+
+  try {
+    if (account.email) localStorage.setItem('orbitmatch:email', account.email);
+    if (account.intent) localStorage.setItem('orbitmatch:view', account.intent);
+  } catch { /* private window */ }
 
   document.getElementById('form-wrap').replaceChildren(card);
   card.focus();

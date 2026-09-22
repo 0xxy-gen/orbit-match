@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · OrbitMatch</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/app.css">
+  <script type="module" src="/home.js"></script>
+</head>
+<body class="app-page">
+  <header class="app-bar">
+    <div class="bar-left">
+      <a class="logo" href="/home.html">OrbitMatch</a>
+
+      <form class="search" role="search" id="search-form">
+        <label class="sr-only" for="search">Search</label>
+        <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
+          <circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M13 13l4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <input id="search" type="search" placeholder="Search..." autocomplete="off">
+      </form>
+
+      <nav class="tabs" aria-label="Sections">
+        <a href="/home.html" aria-current="page">Dashboard</a>
+        <a href="/missions.html" id="missions-link">Missions</a>
+        <a href="/browse.html" id="browse-link">Browse</a>
+      </nav>
+    </div>
+
+    <div class="account" id="account">
+      <button class="ask-open" type="button" id="ask-button" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+          <path d="M10.6 2.2c.62 5.9 2.9 8.3 8.4 9.3-5.5 1-7.78 3.4-8.4 9.3-.62-5.9-2.9-8.3-8.4-9.3 5.5-1 7.78-3.4 8.4-9.3Z" fill="currentColor"/>
+          <path d="M19.4 14.2c.22 2.05.98 2.88 2.9 3.2-1.92.32-2.68 1.15-2.9 3.2-.22-2.05-.98-2.88-2.9-3.2 1.92-.32 2.68-1.15 2.9-3.2Z" fill="currentColor" opacity=".62"/>
+        </svg>
+        Ask Cosmo
+        <kbd>⌘K</kbd>
+      </button>
+      <button class="icon-btn" type="button" aria-label="Help">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="10" cy="10" r="7.5"/>
+          <path d="M8 7.8a2.1 2.1 0 1 1 2.6 2c-.5.2-.8.6-.8 1.1v.5" stroke-linecap="round"/>
+          <circle cx="10" cy="14" r=".9" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
+
+      <button class="icon-btn" type="button" aria-label="Messages">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+          <path d="M3.5 4.5h13v9h-7.5l-3.5 3v-3h-2z"/>
+        </svg>
+        <!-- placeholder count -->
+        <span class="pip" id="message-count">3</span>
+      </button>
+
+      <button class="icon-btn" type="button" aria-label="Notifications">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+          <path d="M5.5 8.5a4.5 4.5 0 0 1 9 0c0 3 1 4.5 1 4.5h-11s1-1.5 1-4.5z"/>
+          <path d="M8.5 15.5a1.6 1.6 0 0 0 3 0" stroke-linecap="round"/>
+        </svg>
+        <!-- placeholder count -->
+        <span class="pip" id="bell-count">12</span>
+      </button>
+
+      <span class="bar-divider" aria-hidden="true"></span>
+
+      <button class="avatar" type="button" id="avatar" aria-label="Your account"></button>
+    </div>
+  </header>
+
+  <!-- ─────────────────────────────────────────────────────────────────────────
+       BLANK CANVAS. Build the dashboard here.
+
+       - `body.app-page` gives the dark theme, Inter and the page background.
+       - `.app-main` centres content at 1180px with the standard gutters.
+       - The buyer / seller switch writes `data-view="buy" | "sell"` on <main>,
+         so role-specific blocks can be styled or queried from one page:
+             main[data-view="sell"] .something { … }
+         and read in JS as document.getElementById('canvas').dataset.view
+       - Building blocks already in app.css, use or ignore: .page-head, .card,
+         .facts, .badge, .chip, .ghost, .submit.compact, .empty, .toast.
+       - To lose the header entirely, delete the <header> above and the two
+         switch/account lines in home.js.
+       ────────────────────────────────────────────────────────────────────── -->
+  <main class="app-main" id="canvas" data-view="buy">
+    <div class="page-head">
+      <div class="greeting-row">
+        <h1 id="greeting">Hello</h1>
+        <button class="ghost small" type="button" id="edit-dashboard">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M1.5 6.5h13M6.5 6.5v7"/>
+          </svg>
+          Edit Dashboard
+        </button>
+      </div>
+      <div class="page-actions">
+        <a class="ghost" href="/browse.html" id="browse-action"></a>
+        <button class="submit compact" type="button" id="primary-action"></button>
+      </div>
+    </div>
+
+    <div class="add-widget" id="add-widget" hidden></div>
+
+    <div class="box-grid">
+      <section class="box" data-span="12" data-widget="calendar" data-label="Delivery &amp; Launch Calendar" aria-labelledby="calendar-title">
+      <div class="box-head">
+        <h2 class="box-title" id="calendar-title">Delivery &amp; Launch Calendar</h2>
+        <a class="quiet-link" href="/browse.html">See all</a>
+      </div>
+      <div class="box-body" id="calendar">
+        <!-- the strip mounts here; fill a month in home.js -->
+      </div>
+    </section>
+
+      <section class="box" data-span="8" data-widget="priority" data-label="Priority &amp; Bookmarked Launch Listings" aria-labelledby="priority-title">
+        <div class="box-head">
+          <h2 class="box-title" id="priority-title">Priority &amp; Bookmarked Launch Listings</h2>
+          <a class="quiet-link" href="/browse.html">See all</a>
+        </div>
+        <div class="box-body">
+          <!-- rows go here -->
+        </div>
+      </section>
+
+      <section class="box" data-span="4" data-widget="tasks" data-label="Tasks" aria-labelledby="tasks-title">
+        <div class="box-head">
+          <h2 class="box-title" id="tasks-title">Tasks</h2>
+          <a class="quiet-link" href="/browse.html">See all</a>
+        </div>
+        <div class="box-body">
+          <!-- gates: a request to answer (10 business days), an NDA to sign (5),
+               a quote inside its validity -->
+        </div>
+      </section>
+
+      <section class="box" data-span="7" data-widget="missions" data-label="Mission List" aria-labelledby="missions-title">
+        <div class="box-head">
+          <h2 class="box-title" id="missions-title">Mission List</h2>
+          <a class="quiet-link" href="/missions.html" id="missions-see-all">See all</a>
+        </div>
+        <div class="box-body">
+          <!-- rows go here -->
+        </div>
+      </section>
+
+      <section class="box" data-span="5" data-widget="exceptions" data-label="Exceptions" aria-labelledby="exceptions-title">
+        <div class="box-head">
+          <h2 class="box-title" id="exceptions-title">Exceptions</h2>
+          <a class="quiet-link" href="/browse.html">See all</a>
+        </div>
+        <div class="box-body">
+          <!-- WindowChanged, RequestExpired, NdaExpired, QuoteExpired,
+               MatchWithdrawn, ListingWithdrawn, capacity gone at execution -->
+        </div>
+      </section>
+
+      <section class="box" data-span="12" data-role="sell" data-widget="bookings" data-label="Bookings" aria-labelledby="bookings-title">
+        <div class="box-head">
+          <h2 class="box-title" id="bookings-title">Bookings</h2>
+          <a class="quiet-link" href="/browse.html">See all</a>
+        </div>
+        <div class="box-body">
+          <!-- SatelliteBooked: what is confirmed on the manifest -->
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

@@ -3,15 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "OrbitMatch — a marketplace matching satellites that need a launch with providers that sell one",
+  "description": "OrbitMatch \u2014 front-end pages for a launch marketplace: sign up, log in and the privacy policy",
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning server.js",
-    "dev": "node --disable-warning=ExperimentalWarning --watch server.js"
-  },
-  "engines": {
-    "node": ">=22.13"
-  },
-  "dependencies": {
-    "express": "^5.1.0"
+    "start": "python3 -m http.server 3200 --directory public"
   }
 }

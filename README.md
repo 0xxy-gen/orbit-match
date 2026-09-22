@@ -1,34 +1,46 @@
 # OrbitMatch
 
-A marketplace matching satellite operators that need a launch with providers
-that sell one.
+Front-end pages for a launch marketplace that matches satellite operators
+needing a launch with providers selling one. **There is no backend**: no server
+code, no database, no accounts. The forms validate in the browser and show what
+would come next, and nothing is stored or sent anywhere.
 
 ## Run it
 
 ```
-npm install
-npm start          # http://localhost:3200   (npm run dev to watch)
+npm start          # http://localhost:3200
 ```
 
-Requires Node 22.13+. The only dependency is Express; accounts are stored in
-SQLite via Node's built-in `node:sqlite` at `data/orbitmatch.db`, and passwords
-are hashed with scrypt from `node:crypto`. Set `PORT` to use another port.
+That serves the `public/` folder with Python's built-in static file server —
+any static server does the same job, and opening `public/signup.html` in a
+browser works too.
 
 ## Pages
 
-**Sign up** (`/signup`), in three sections:
+| Page | File | What it does |
+| --- | --- | --- |
+| Sign up | `public/signup.html` | Three sections — personal, company, log in — then a summary of what was entered |
+| Log in | `public/login.html` | Work email and password, with Show/Hide and a link to the forgot page |
+| Forgot password | `public/forgot.html` | Takes an email, then says password reset is not connected |
+| Privacy Policy | `public/privacy.html` | The Aether Space policy, with a sticky contents rail and print styles |
 
-1. **Personal info**: first name, last name, work email, business phone,
-   agreement to the Privacy Policy
-2. **Company info**: company name, company size, role, whether they need a
-   launch or sell launches, satellites launched per year
-3. **Log in info**: password (at least 8 characters) and confirm password
+Each success screen says plainly that it is a prototype, so nobody mistakes it
+for a real account.
 
-The choice lists live in `public/options.js`, which the browser uses to build
-the form and the server uses to validate it.
+## How it fits together
 
-## API
+- `public/options.js` — the choice lists (company sizes, need/sell, satellites
+  per year). The forms build their fields from it.
+- `public/validate.js` — the form rules, keyed by input name so each message
+  lands under its field. Front end only, so it is a helpful hint, never a
+  security boundary.
+- `public/app.css` — one stylesheet for every page: black, Inter, underline
+  inputs, cyan for action and state.
 
-| Method | Path          | Purpose                                                        |
-| ------ | ------------- | -------------------------------------------------------------- |
-| POST   | `/api/signup` | Create an account. Errors return `{ fields: { name: message } }` keyed by input name |
+## Wiring it to a server later
+
+Three places expect a real backend, and each says so in a comment:
+
+- `signup.js` → `showSuccess()` replaces a POST that would create the account
+- `login.js` → `showSignedIn()` replaces a POST that would start a session
+- `forgot.js` → `showPending()` replaces a POST that would email a reset link
