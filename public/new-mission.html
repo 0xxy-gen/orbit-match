@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>New mission · OrbitMatch</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/app.css">
+  <script>try{var t=localStorage.getItem('orbitmatch:theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');}catch(e){}</script>
+  <script type="module" src="/new-mission.js"></script>
+</head>
+<body class="app-page">
+  <header class="app-bar">
+    <div class="bar-left">
+      <a class="logo" href="/home.html">OrbitMatch</a>
+
+      <form class="search" role="search">
+        <label class="sr-only" for="search">Search</label>
+        <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
+          <circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M13 13l4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <input id="search" type="search" placeholder="Search..." autocomplete="off">
+      </form>
+
+      <nav class="tabs" aria-label="Sections">
+        <a href="/home.html" id="dash-link">Dashboard</a>
+        <a href="/missions.html" id="missions-link" aria-current="page">Missions</a>
+        <a href="/browse.html" id="browse-link">Browse</a>
+      </nav>
+    </div>
+
+    <div class="account" id="account">
+      <button class="ask-open" type="button" id="ask-button" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+          <path d="M10.6 2.2c.62 5.9 2.9 8.3 8.4 9.3-5.5 1-7.78 3.4-8.4 9.3-.62-5.9-2.9-8.3-8.4-9.3 5.5-1 7.78-3.4 8.4-9.3Z" fill="currentColor"/>
+          <path d="M19.4 14.2c.22 2.05.98 2.88 2.9 3.2-1.92.32-2.68 1.15-2.9 3.2-.22-2.05-.98-2.88-2.9-3.2 1.92-.32 2.68-1.15 2.9-3.2Z" fill="currentColor" opacity=".62"/>
+        </svg>
+        Ask Cosmo
+        <kbd>⌘K</kbd>
+      </button>
+
+      <button class="icon-btn" type="button" aria-label="Help">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="10" cy="10" r="7.5"/>
+          <path d="M8 7.8a2.1 2.1 0 1 1 2.6 2c-.5.2-.8.6-.8 1.1v.5" stroke-linecap="round"/>
+          <circle cx="10" cy="14" r=".9" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
+
+      <button class="icon-btn" type="button" aria-label="Messages">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+          <path d="M3.5 4.5h13v9h-7.5l-3.5 3v-3h-2z"/>
+        </svg>
+        <!-- placeholder count -->
+        <span class="pip" id="message-count">3</span>
+      </button>
+
+      <button class="icon-btn" type="button" aria-label="Notifications">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+          <path d="M5.5 8.5a4.5 4.5 0 0 1 9 0c0 3 1 4.5 1 4.5h-11s1-1.5 1-4.5z"/>
+          <path d="M8.5 15.5a1.6 1.6 0 0 0 3 0" stroke-linecap="round"/>
+        </svg>
+        <!-- placeholder count -->
+        <span class="pip" id="bell-count">12</span>
+      </button>
+
+      <button class="icon-btn" type="button" id="theme-toggle"></button>
+      <span class="bar-divider" aria-hidden="true"></span>
+
+      <button class="avatar" type="button" id="avatar" aria-label="Your account"></button>
+    </div>
+  </header>
+
+  <main class="app-main intake" id="canvas">
+    <div id="form-wrap">
+      <a class="back-link" href="/missions.html">← Missions</a>
+
+      <header class="intake-head">
+        <h1>New mission</h1>
+        <p class="muted">What you enter here is what gets matched against published launch capacity. The satellite numbers do the matching, so they are the part worth getting right.</p>
+      </header>
+
+      <form id="mission" novalidate>
+        <fieldset>
+          <legend><span class="step">1</span>The mission</legend>
+
+          <div class="field">
+            <label for="name">Mission name</label>
+            <input id="name" name="name" type="text" maxlength="120" placeholder="Boreal" aria-describedby="name-error">
+            <p class="error" id="name-error" aria-live="polite"></p>
+          </div>
+
+          <div class="field">
+            <label for="objective">Objective</label>
+            <input id="objective" name="objective" type="text" maxlength="300" placeholder="Sub-metre optical imaging of Arctic shipping lanes" aria-describedby="objective-error">
+            <p class="error" id="objective-error" aria-live="polite"></p>
+          </div>
+
+          <div class="field">
+            <label for="budget">Target budget (USD)</label>
+            <div class="money">
+              <span class="money-unit" aria-hidden="true">$</span>
+              <input id="budget" name="budget" type="text" inputmode="decimal" maxlength="20" placeholder="14,000,000" aria-describedby="budget-hint budget-error">
+            </div>
+            <p class="hint" id="budget-hint">Shown only to you — sellers never see this figure. Launch is quoted in US dollars, so it is the currency every side of a deal can compare.</p>
+            <p class="error" id="budget-error" aria-live="polite"></p>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend><span class="step">2</span>Compliance</legend>
+
+          <div class="row">
+            <div class="field">
+              <label for="country">Country of manufacture</label>
+              <select id="country" name="country" aria-describedby="country-error">
+                <option value="">Choose a country</option>
+              </select>
+              <p class="error" id="country-error" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="registration">State of registry</label>
+              <select id="registration" name="registration" aria-describedby="registration-hint registration-error">
+                <option value="">Choose a country</option>
+              </select>
+              <p class="hint" id="registration-hint">The State that registers the satellite with the UN and keeps jurisdiction over it. Often, but not always, the country of manufacture.</p>
+              <p class="error" id="registration-error" aria-live="polite"></p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="exportControl">Export control status</label>
+            <select id="exportControl" name="exportControl" aria-describedby="exportControl-hint exportControl-error">
+              <option value="">Choose a status</option>
+            </select>
+            <p class="hint" id="exportControl-hint">This decides which launch sites and providers you can be matched with at all.</p>
+            <p class="error" id="exportControl-error" aria-live="polite"></p>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend><span class="step">3</span>Ride &amp; flexibility</legend>
+          <div class="field">
+            <span class="field-label" id="ride-label">How do you want to fly?</span>
+            <div class="choices three" id="ride" role="radiogroup" aria-labelledby="ride-label" aria-describedby="ride-error"></div>
+            <p class="error" id="ride-error" aria-live="polite"></p>
+          </div>
+
+          <div class="field">
+            <span class="field-label" id="flex-label">If nothing fits exactly, what can move?</span>
+            <div class="flex-grid" id="flexibility" aria-labelledby="flex-label" aria-describedby="flex-hint"></div>
+            <p class="hint" id="flex-hint">Only used when a search returns nothing. Anything left unticked is treated as a hard requirement, and we never widen a search that already has matches.</p>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend><span class="step">4</span>Satellites</legend>
+          <p class="hint" id="satellites-hint">One block per spacecraft. Identical satellites in a constellation can be duplicated rather than retyped.</p>
+          <div id="satellites"></div>
+          <p class="error" id="satellites-error" aria-live="polite"></p>
+          <div class="sat-add">
+            <button class="ghost" type="button" id="add-satellite">+ Add a satellite</button>
+          </div>
+        </fieldset>
+
+        <div class="intake-bar">
+          <p class="intake-tally" id="tally"></p>
+          <div class="intake-actions">
+            <button class="submit secondary" type="submit" id="draft" value="Draft">Save as Draft</button>
+            <button class="submit" type="submit" id="publish" value="Published">Publish Mission</button>
+          </div>
+        </div>
+        <p class="prototype-note">Prototype — nothing is saved and no listing sees this.</p>
+      </form>
+    </div>
+  </main>
+
+  <footer class="site-foot">
+    <span>© 2026 <a href="https://aetherspace.tech/">Aether Space, Inc.</a></span>
+    <a href="mailto:contact@aetherspace.tech">contact@aetherspace.tech</a>
+    <div class="site-foot-right">
+      <a href="/privacy.html">Privacy Policy</a>
+    </div>
+  </footer>
+</body>
+</html>

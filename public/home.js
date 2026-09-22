@@ -4,6 +4,8 @@ import { calendarStrip } from './calendar-strip.js';
 import { dashboardEdit } from './dashboard-edit.js';
 import { assistant, toggleAssistant } from './assistant.js';
 import { accountMenu, currentUser } from './account-menu.js';
+import { themeToggle } from './theme.js';
+import { widgetTips } from './widget-tips.js';
 
 const STORE_VIEW = 'orbitmatch:view';
 const STORE_EMAIL = 'orbitmatch:email';
@@ -41,7 +43,9 @@ function render() {
   document.getElementById('calendar').replaceChildren(calendarStrip({ view, items: [] }));
 }
 
+// The buyer's primary action has a form behind it now; the seller's does not.
 document.getElementById('primary-action').addEventListener('click', event => {
+  if (view === 'buy') { location.href = `/new-mission.html?view=${view}`; return; }
   const toast = document.createElement('div');
   toast.className = 'toast';
   toast.textContent = `${event.target.textContent} — not built in this prototype.`;
@@ -56,6 +60,10 @@ dashboardEdit();
 
 // the avatar menu, which is where the demo role switch now lives
 accountMenu(view);
+themeToggle();
+
+// what each panel is for, on the header
+widgetTips();
 
 // Ask Aether: summoned from the nav bar, ⌘K, or any element with data-ask
 assistant(view);

@@ -248,3 +248,169 @@ export const FIT = { inclination: 1.5, altitude: 150 };
 export const SSO_CURVE = [
   [300, 96.67], [400, 97.03], [500, 97.4], [600, 97.79], [700, 98.19], [800, 98.6],
 ];
+
+// ─── the missions list ──────────────────────────────────────────────────────
+// The fields are the ones the mission intake actually asks for: the mission and
+// its objective, budget, the regulatory answers, the ride preference, how many
+// satellites, and then per satellite the eight numbers that decide what it can
+// fly on.
+export const MISSION_ROWS = {
+  // Buyer rows carry exactly what the intake form asks for — the same fields in
+  // the same words — so a mission shows what somebody actually typed into it.
+  buy: [
+    {
+      id: 'm1', name: 'Boreal', objective: 'Sub-metre optical imaging of Arctic shipping lanes',
+      status: 'Published', budget: '$18,000,000', country: 'United Kingdom', exportControl: 'None',
+      registration: 'United Kingdom', ride: 'Rideshare',
+      flexibility: ['Launch window'],
+      // Three satellites, two launches: a mission is not one flight. Your spec
+      // allows one agreement to cover several satellites on one listing — a
+      // launch batch — so the satellites group by the launch they are on.
+      launches: [
+        { id: 'b1', listing: 'Aster-2', seller: 'Meridian Launch', window: 'Q3 2026', status: 'in procurement', reached: 2, detail: 'Quote v2 · 9 days of validity left' },
+        { id: 'b2', listing: 'NW-5', seller: 'Northwind Orbital', window: 'Q1 2027', status: 'NDA pending', reached: 1, detail: 'NDA expires in 4 business days' },
+      ],
+      satellites: [
+        {
+          name: 'Aurora-1', launch: 'b1', form: 'Custom', mass: '68', orbit: 'SSO', deployerMass: '', dimensions: '700 × 700 × 700',
+          inclination: '97.45', altitude: '520', ltan: '10:30',
+          windowFrom: 'Q3 2026', windowTo: 'Q4 2026',
+          propulsion: 'Cold gas', readiness: 'Integration & test', shipBy: 'Mar 2026',
+          deployer: 'ESPA Grande, CSD',
+        },
+        {
+          name: 'Aurora-2', launch: 'b1', form: 'Custom', mass: '68', orbit: 'SSO', deployerMass: '', dimensions: '700 × 700 × 700',
+          inclination: '97.45', altitude: '520', ltan: '10:30',
+          windowFrom: 'Q3 2026', windowTo: 'Q4 2026',
+          propulsion: 'Cold gas', readiness: 'In build', shipBy: 'May 2026',
+          deployer: 'ESPA Grande, CSD',
+        },
+        {
+          name: 'Aurora-T', launch: 'b2', form: '12U', mass: '12', orbit: 'SSO', deployerMass: '12', dimensions: '226.3 × 226.3 × 366',
+          inclination: '97.6', altitude: '550', ltan: '10:30',
+          windowFrom: 'Q1 2027', windowTo: 'Q2 2027',
+          propulsion: 'None', readiness: 'Concept / design', shipBy: 'Aug 2026',
+          deployer: '12U dispenser',
+        },
+      ],
+    },
+    {
+      id: 'm2', name: 'Lyra', objective: 'Ku-band connectivity demonstrator',
+      status: 'Draft', budget: '$5,400,000', country: 'United Kingdom', exportControl: 'ITAR components',
+      registration: 'United Kingdom', ride: 'Open to both',
+      flexibility: [],
+      launches: [],
+      satellites: [
+        {
+          name: 'Lyra-1', form: 'Custom', mass: '210', orbit: 'LEO', deployerMass: '', dimensions: '1000 × 1000 × 1100',
+          inclination: '51.6', altitude: '450', ltan: '—',
+          windowFrom: 'Q4 2026', windowTo: 'Q4 2026',
+          propulsion: 'Hydrazine', readiness: 'Concept / design', shipBy: 'Feb 2026',
+          deployer: 'ESPA Grande',
+        },
+      ],
+    },
+    {
+      id: 'm3', name: 'Sagara', objective: 'Maritime AIS monitoring, polar coverage',
+      status: 'Published', budget: '$8,700,000', country: 'Norway', exportControl: 'None',
+      registration: 'Norway', ride: 'Dedicated',
+      flexibility: ['Launch window', 'Altitude'],
+      launches: [
+        { id: 'b3', listing: 'NW-4', seller: 'Northwind Orbital', window: 'Q4 2026', status: 'matched', reached: 0, detail: 'No request sent yet' },
+      ],
+      satellites: [
+        {
+          name: 'Sagara-1', launch: 'b3', form: 'Custom', mass: '46', orbit: 'Polar LEO', deployerMass: '', dimensions: '600 × 600 × 600',
+          inclination: '90.0', altitude: '600', ltan: '—',
+          windowFrom: 'Q4 2026', windowTo: 'Q1 2027',
+          propulsion: 'Green monopropellant', readiness: 'In build', shipBy: 'Apr 2026',
+          deployer: 'CSD',
+        },
+        {
+          name: 'Sagara-2', form: 'Custom', mass: '46', orbit: 'Polar LEO', deployerMass: '', dimensions: '600 × 600 × 600',
+          inclination: '90.0', altitude: '600', ltan: '—',
+          windowFrom: 'Q4 2026', windowTo: 'Q1 2027',
+          propulsion: 'Green monopropellant', readiness: 'In build', shipBy: 'Apr 2026',
+          deployer: 'CSD',
+        },
+      ],
+    },
+  ],
+  sell: [
+    {
+      id: 'n1', name: 'Aster-2', objective: 'Andøya · SSO rideshare',
+      status: 'Published', capacity: '180 kg spare of 1,200 kg', orbit: 'SSO 520 km · 97.5°',
+      window: 'Q3 2026', lMinus: 'L−6 weeks', site: 'Andøya, Norway',
+      deployers: 'ESPA Grande, CSD, 12U dispenser', terms: '£38k / kg',
+    },
+    {
+      id: 'n2', name: 'Aster-4', objective: 'Andøya · SSO rideshare',
+      status: 'Published', capacity: '210 kg spare of 1,200 kg', orbit: 'SSO 540 km · 97.6°',
+      window: 'Q4 2027', lMinus: 'L−6 weeks', site: 'Andøya, Norway',
+      deployers: 'ESPA Grande, CSD', terms: '£36k / kg',
+    },
+    {
+      id: 'n3', name: 'Aster-3', objective: 'Cape Canaveral · mid-inclination LEO',
+      status: 'Draft', capacity: '640 kg spare of 2,000 kg', orbit: 'LEO 450 km · 51.6°',
+      window: 'Q1 2027', lMinus: 'L−10 weeks', site: 'Cape Canaveral, USA',
+      deployers: 'ESPA Grande', terms: 'On request',
+    },
+  ],
+};
+
+export const VIEWS = {
+  buy: [
+    { key: 'all', label: 'All missions', test: () => true },
+    { key: 'published', label: 'Published', test: row => row.status === 'Published' },
+    { key: 'drafts', label: 'Drafts', test: row => row.status === 'Draft' },
+  ],
+  sell: [
+    { key: 'all', label: 'All listings', test: () => true },
+    { key: 'published', label: 'Published', test: row => row.status === 'Published' },
+    { key: 'drafts', label: 'Drafts', test: row => row.status === 'Draft' },
+  ],
+};
+
+// ─── one deal, end to end ───────────────────────────────────────────────────
+// The procurement path as a checklist. `actor` says whose move it is, `event`
+// names what the step writes (a step with no event is your own work and the
+// other side cannot see it), and a loop step carries `rounds` instead of
+// pretending to be a single milestone.
+export const PHASES = ['Matched', 'NDA', 'Procurement', 'Contract', 'Booked'];
+
+export const DEAL = {
+  satellite: 'Aurora-1',
+  mission: 'Boreal',
+  listing: 'Aster-2',
+  seller: 'Meridian Launch',
+  status: 'in procurement',
+  window: 'Q3 2026',
+  delivery: '3 Nov 2026',
+  deliveryWas: '27 Oct 2026',
+  waiting: { side: 'you', what: 'Quote v2 awaiting your decision', clock: '9 days of validity left' },
+  summary: ['Matched', 'NDA', 'Procurement', 'Contract', 'Booked'],
+  reached: 2,
+  steps: [
+    { label: 'Mission published', event: 'SatelliteReady', actor: 'You', state: 'done', at: '12 Mar 2026' },
+    { label: 'Mission matched', event: 'MatchFound', actor: 'Matcher', state: 'done', at: '14 Mar 2026', detail: '3 listings matched Aurora-1' },
+    { label: 'Sign mutual NDA', event: 'NdaExecuted', actor: 'Both', state: 'done', at: '2 Apr 2026', detail: 'Signed by both, channel opened' },
+    { label: 'Draft RFI', actor: 'You', state: 'done', at: '5 Apr 2026', note: 'Your draft — the seller saw nothing until it was sent' },
+    { label: 'Send RFI', event: 'RfiSubmitted', actor: 'You', state: 'done', at: '6 Apr 2026' },
+    { label: 'ROM received', event: 'RomSubmitted', actor: 'Meridian Launch', state: 'done', at: '13 Apr 2026', detail: 'v1 · ballpark, not binding' },
+    { label: 'Approve, reject or negotiate the ROM', event: 'RomAccepted', actor: 'You', state: 'done', at: '16 Apr 2026', rounds: 'settled in 1 round' },
+    { label: 'Draft RFQ', actor: 'You', state: 'done', at: '20 Apr 2026', note: 'Your draft — includes the compliance matrix' },
+    { label: 'Send RFQ', event: 'RfqSubmitted', actor: 'You', state: 'done', at: '21 Apr 2026', detail: 'With ComplianceMatrixAttached' },
+    { label: 'Quote received', event: 'QuoteSubmitted', actor: 'Meridian Launch', state: 'done', at: '8 May 2026', detail: 'v2 · supersedes v1' },
+    {
+      label: 'Approve, reject or negotiate the quote', event: 'TermProposed / TermAccepted', actor: 'You',
+      state: 'current', rounds: 'round 2 · 2 compliance rows contested',
+      detail: 'Quote v2 valid for 9 more days',
+    },
+    { label: 'Request the LSA and SOW', actor: 'You', state: 'next' },
+    { label: 'LSA and SOW received', event: 'AgreementDrafted', actor: 'Meridian Launch', state: 'next' },
+    { label: 'Approve, reject or negotiate the agreement', event: 'TermProposed / TermAccepted', actor: 'Both', state: 'next' },
+    { label: 'LSA and SOW signature', event: 'AgreementSigned ×2 → AgreementExecuted', actor: 'Both', state: 'next' },
+    { label: 'Billing', actor: '—', state: 'untracked', note: 'No events for this in v1 of the flow — it needs a model before it can be tracked' },
+    { label: 'Launch booked', event: 'SatelliteBooked', actor: 'Platform', state: 'next', detail: 'Exclusivity begins here' },
+  ],
+};

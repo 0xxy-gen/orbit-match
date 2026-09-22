@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Browse · OrbitMatch</title>
+  <title>Mission · OrbitMatch</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="/app.css">
   <script>try{var t=localStorage.getItem('orbitmatch:theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');}catch(e){}</script>
-  <script type="module" src="/browse.js"></script>
+  <script type="module" src="/mission.js"></script>
 </head>
 <body class="app-page">
   <header class="app-bar">
@@ -28,8 +28,8 @@
 
       <nav class="tabs" aria-label="Sections">
         <a href="/home.html" id="dash-link">Dashboard</a>
-        <a href="/missions.html" id="missions-link">Missions</a>
-        <a href="/browse.html" id="browse-link" aria-current="page">Browse</a>
+        <a href="/missions.html" id="missions-link" aria-current="page">Missions</a>
+        <a href="/browse.html" id="browse-link">Browse</a>
       </nav>
     </div>
 
@@ -75,41 +75,7 @@
     </div>
   </header>
 
-  <main class="app-main">
-    <div class="page-head">
-      <div>
-        <h1 id="title"></h1>
-        <p class="muted" id="sub"></p>
-      </div>
-      <div class="page-actions">
-        <button class="submit compact" type="button" id="action-primary"></button>
-      </div>
-    </div>
-
-    <!-- Time and orbit are the axes that matter in launch, not geography. -->
-    <section class="timeline" aria-labelledby="timeline-title">
-      <div class="timeline-head">
-        <div>
-          <h2 id="timeline-title">Windows</h2>
-          <p class="muted" id="timeline-sub"></p>
-        </div>
-        <button class="quiet-link" type="button" id="clear-cell" hidden>Clear selection</button>
-      </div>
-      <div class="timeline-grid" id="timeline"></div>
-    </section>
-
-    <div class="section-head">
-      <h2 id="results-title"></h2>
-      <div class="filter">
-        <label for="orbit">Orbit</label>
-        <select id="orbit"><option value="">All orbits</option></select>
-      </div>
-    </div>
-
-    <section class="results" id="results" aria-live="polite"></section>
-
-    <p class="prototype-note">Prototype — every row is sample data, and nothing is saved.</p>
-  </main>
+  <main class="app-main" id="canvas" data-view="buy"></main>
 
   <footer class="site-foot">
     <span>© 2026 <a href="https://aetherspace.tech/">Aether Space, Inc.</a></span>
@@ -118,7 +84,5 @@
       <a href="/privacy.html">Privacy Policy</a>
     </div>
   </footer>
-
-  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

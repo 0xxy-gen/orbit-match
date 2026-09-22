@@ -2,6 +2,7 @@
 // this screen says exactly that rather than claiming a link is on its way.
 // Swap showPending() for a POST to /api/password-reset once that exists.
 import { validateEmailOnly } from './validate.js';
+import { themeToggle } from './theme.js';
 
 // Demo setting — see signup.js.
 const ENFORCE_ON_SUBMIT = false;
@@ -52,3 +53,6 @@ function showPending(email) {
   document.getElementById('form-wrap').replaceChildren(card);
   card.focus();
 }
+
+// light / dark, the same switch the app bar carries
+themeToggle();

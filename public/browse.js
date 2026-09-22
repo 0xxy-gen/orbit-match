@@ -8,6 +8,7 @@
 import { LISTINGS, SATELLITES } from './demo-data.js';
 import { assistant, toggleAssistant, openAssistant } from './assistant.js';
 import { accountMenu } from './account-menu.js';
+import { themeToggle } from './theme.js';
 
 const STORE_VIEW = 'orbitmatch:view';
 
@@ -180,7 +181,8 @@ function render() {
   document.getElementById('timeline-sub').textContent = config.timelineSub;
   document.getElementById('action-primary').textContent = config.primary;
   document.getElementById('dash-link').href = `/home.html?view=${view}`;
-  document.getElementById('missions-link').href = `/missions.html?view=${view}`;
+  const missions = document.getElementById('missions-link');
+  if (missions) missions.href = `/missions.html?view=${view}`;
 
   const orbits = [...new Set(config.rows.map(row => row.orbit))];
   const chosen = orbitFilter.value;
@@ -215,6 +217,7 @@ render();
 
 // the avatar menu, which is where the demo role switch now lives
 accountMenu(view);
+themeToggle();
 
 // Ask Aether: summoned from the nav bar, ⌘K, or any element with data-ask
 assistant(view);

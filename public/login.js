@@ -1,6 +1,7 @@
 // Front end only: there is nothing to sign in to yet, so showSignedIn() stands
 // in for a POST that would start a session.
 import { validateLogin } from './validate.js';
+import { themeToggle } from './theme.js';
 
 // Demo setting. false: fields turn red as you leave them, but the button still
 // goes through. true: the button stops on the first problem — which is what you
@@ -73,15 +74,10 @@ function showSignedIn(email) {
   card.focus();
 }
 
-// DEMO ONLY: one click into either side of the marketplace, no typing, no
-// logging out. Delete this block and the .demo-entry markup for the real thing.
-for (const button of document.querySelectorAll('.demo-entry button')) {
-  button.addEventListener('click', () => {
-    try {
-      localStorage.setItem('orbitmatch:view', button.dataset.view);
-      localStorage.setItem('orbitmatch:email',
-        button.dataset.view === 'need' ? 'rohit@kestrel.example' : 'rohit@meridianlaunch.example');
-    } catch { /* private window */ }
-    location.href = `home.html?view=${button.dataset.view}`;
-  });
-}
+// There was a demo shortcut here that dropped straight into either side of the
+// marketplace. It is gone: the form already submits with blank fields, so the
+// button alone gets you in, and which side you are on is chosen in the account
+// menu — which is where it belongs, and worth showing rather than skipping.
+
+// light / dark, the same switch the app bar carries
+themeToggle();

@@ -81,6 +81,24 @@ export function accountMenu(view) {
   });
   menu.append(logout);
 
+  // The legal and contact links, which a marketing site puts in a footer.
+  // A signed-in product has nowhere to put a footer — its pages scroll and
+  // never end — so they live here, one click away from every page, instead of
+  // costing a row of working space on all of them.
+  menu.append(el('div', 'menu-rule'));
+
+  const foot = el('div', 'menu-foot');
+  const privacy = el('a', null, 'Privacy Policy');
+  privacy.href = '/privacy.html';
+  privacy.setAttribute('role', 'menuitem');
+
+  const contact = el('a', null, 'contact@aetherspace.tech');
+  contact.href = 'mailto:contact@aetherspace.tech';
+  contact.setAttribute('role', 'menuitem');
+
+  foot.append(privacy, contact, el('span', 'menu-copy', '\u00a9 2026 Aether Space, Inc.'));
+  menu.append(foot);
+
   button.after(menu);
 
   const close = () => {

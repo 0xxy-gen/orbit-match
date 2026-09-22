@@ -9,9 +9,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="/app.css">
+  <script>try{var t=localStorage.getItem('orbitmatch:theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');}catch(e){}</script>
   <script type="module" src="/privacy.js"></script>
 </head>
 <body class="doc-page">
+  <button class="icon-btn theme-float" type="button" id="theme-toggle"></button>
   <main class="doc">
     <div class="doc-top">
       <a class="wordmark" href="/signup.html">OrbitMatch</a>
@@ -151,7 +153,8 @@
 
     <footer class="doc-foot">
       <a href="/signup.html">Back to sign up</a>
-      <span>© 2026 Aether Space, Inc.</span>
+      <a href="mailto:contact@aetherspace.tech">contact@aetherspace.tech</a>
+      <span>© 2026 <a href="https://aetherspace.tech/">Aether Space, Inc.</a></span>
     </footer>
   </main>
 </body>

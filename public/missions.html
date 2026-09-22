@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="/app.css">
+  <script>try{var t=localStorage.getItem('orbitmatch:theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');}catch(e){}</script>
   <script type="module" src="/missions.js"></script>
 </head>
 <body class="app-page">
@@ -27,7 +28,7 @@
 
       <nav class="tabs" aria-label="Sections">
         <a href="/home.html" id="dash-link">Dashboard</a>
-        <a href="/missions.html" aria-current="page">Missions</a>
+        <a href="/missions.html" id="missions-link" aria-current="page">Missions</a>
         <a href="/browse.html" id="browse-link">Browse</a>
       </nav>
     </div>
@@ -41,6 +42,7 @@
         Ask Cosmo
         <kbd>⌘K</kbd>
       </button>
+
       <button class="icon-btn" type="button" aria-label="Help">
         <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
           <circle cx="10" cy="10" r="7.5"/>
@@ -48,12 +50,42 @@
           <circle cx="10" cy="14" r=".9" fill="currentColor" stroke="none"/>
         </svg>
       </button>
+
+      <button class="icon-btn" type="button" aria-label="Messages">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+          <path d="M3.5 4.5h13v9h-7.5l-3.5 3v-3h-2z"/>
+        </svg>
+        <!-- placeholder count -->
+        <span class="pip" id="message-count">3</span>
+      </button>
+
+      <button class="icon-btn" type="button" aria-label="Notifications">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+          <path d="M5.5 8.5a4.5 4.5 0 0 1 9 0c0 3 1 4.5 1 4.5h-11s1-1.5 1-4.5z"/>
+          <path d="M8.5 15.5a1.6 1.6 0 0 0 3 0" stroke-linecap="round"/>
+        </svg>
+        <!-- placeholder count -->
+        <span class="pip" id="bell-count">12</span>
+      </button>
+
+      <button class="icon-btn" type="button" id="theme-toggle"></button>
       <span class="bar-divider" aria-hidden="true"></span>
+
       <button class="avatar" type="button" id="avatar" aria-label="Your account"></button>
     </div>
   </header>
 
   <!-- Blank, like the dashboard was: build the missions view here. -->
   <main class="app-main" id="canvas" data-view="buy"></main>
+
+  <footer class="site-foot">
+    <span>© 2026 <a href="https://aetherspace.tech/">Aether Space, Inc.</a></span>
+    <a href="mailto:contact@aetherspace.tech">contact@aetherspace.tech</a>
+    <div class="site-foot-right">
+      <a href="/privacy.html">Privacy Policy</a>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

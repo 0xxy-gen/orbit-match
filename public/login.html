@@ -9,9 +9,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="/app.css">
+  <script>try{var t=localStorage.getItem('orbitmatch:theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');}catch(e){}</script>
   <script type="module" src="/login.js"></script>
 </head>
 <body>
+  <button class="icon-btn theme-float" type="button" id="theme-toggle"></button>
   <div class="layout">
     <aside class="brand brand--wide">
       <svg class="orbits" viewBox="0 0 600 340" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
@@ -59,7 +61,7 @@
         <circle cx="132" cy="243" r="1.3" fill="#fff" fill-opacity=".45"/>
       </svg>
 
-      <a class="logo" href="/login.html">OrbitMatch</a>
+      <a class="logo" href="https://aetherspace.tech/">OrbitMatch</a>
 
       <div class="pitch">
         <h1>Welcome back.</h1>
@@ -71,7 +73,6 @@
         </ul>
       </div>
 
-      <p class="brand-foot">© OrbitMatch</p>
     </aside>
 
     <main class="panel">
@@ -108,16 +109,22 @@
         </form>
 
         <p class="alt-action">New to OrbitMatch? <a href="/signup.html">Create an account</a></p>
-
-        <!-- DEMO ONLY: skips typing and drops straight into either side. -->
-        <div class="demo-entry">
-          <span class="demo-label">Demo</span>
-          <button type="button" data-view="need">Enter as an operator</button>
-          <span aria-hidden="true">·</span>
-          <button type="button" data-view="sell">Enter as a provider</button>
-        </div>
       </div>
     </main>
   </div>
+
+  <footer class="site-foot">
+    <span>© 2026 <a href="https://aetherspace.tech/">Aether Space, Inc.</a></span>
+    <a href="mailto:contact@aetherspace.tech">contact@aetherspace.tech</a>
+    <div class="site-foot-right">
+      <a href="/privacy.html">Privacy Policy</a>
+      <!-- TODO: swap in the real company page before this goes anywhere public -->
+      <a class="brand-social" href="https://www.linkedin.com/" target="_blank" rel="noopener" aria-label="Aether Space on LinkedIn">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+          <path d="M4.98 3.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM3 9h4v12H3zM9.5 9h3.8v1.65h.05c.53-.95 1.82-1.95 3.75-1.95 4 0 4.4 2.5 4.4 5.75V21h-4v-5.6c0-1.34-.03-3.06-1.9-3.06-1.9 0-2.2 1.45-2.2 2.95V21h-4z"/>
+        </svg>
+      </a>
+    </div>
+  </footer>
 </body>
 </html>

@@ -1,5 +1,6 @@
 import { COMPANY_SIZES, INTENTS, SATELLITE_BANDS } from './options.js';
 import { validateSignup } from './validate.js';
+import { themeToggle } from './theme.js';
 
 // Demo setting. false: fields turn red as you leave them, but the button still
 // goes through, so the flow can be walked without typing. true: the button
@@ -168,3 +169,6 @@ function showSuccess(account) {
   document.getElementById('form-wrap').replaceChildren(card);
   card.focus();
 }
+
+// light / dark, the same switch the app bar carries
+themeToggle();

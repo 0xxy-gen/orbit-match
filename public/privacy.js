@@ -1,3 +1,4 @@
+import { themeToggle } from './theme.js';
 // Marks the section you are reading in the contents rail.
 const items = [...document.querySelectorAll('.toc li')].map(item => ({
   item,
@@ -14,3 +15,6 @@ function sync() {
 
 document.addEventListener('scroll', sync, { passive: true });
 sync();
+
+// light / dark, the same switch the app bar carries
+themeToggle();
