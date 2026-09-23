@@ -2674,8 +2674,12 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
 }
-.sat-scroll .sat-table { min-width: 1180px; }
-.sat-scroll .sat-table th, .sat-scroll .sat-table td { white-space: nowrap; }
+.sat-scroll .sat-table { min-width: 1080px; }
+.sat-scroll .sat-table td { white-space: nowrap; }
+/* Headings may wrap, values may not. Several columns were being held open by a
+   long heading rather than by anything in them, so the widest thing on screen
+   was a label. */
+.sat-scroll .sat-table th { white-space: normal; }
 
 /* The first column stays put, so a row still says which satellite it is once
    you scroll sideways. A pinned cell has to paint its own background or the
@@ -3087,21 +3091,25 @@ select.cell-input {
 /* out-of-range says so where it happened */
 .cell-input[aria-invalid] { border-bottom-color: var(--danger); color: var(--danger-text); }
 
-/* every column wide enough to show its own value */
-.sat-table [data-col="name"] { min-width: 9rem; }
-.sat-table [data-col="form"] { min-width: 7.5rem; }
-.sat-table [data-col="mass"] { min-width: 6rem; }
-.sat-table [data-col="dimensions"] { min-width: 15rem; }
-.sat-table [data-col="orbit"] { min-width: 8rem; }
-.sat-table [data-col="inclination"] { min-width: 7.5rem; }
-.sat-table [data-col="altitude"] { min-width: 7rem; }
-.sat-table [data-col="ltan"] { min-width: 5.5rem; }
-.sat-table [data-col="window"] { min-width: 13rem; }
-.sat-table [data-col="propulsion"] { min-width: 12rem; }
-.sat-table [data-col="readiness"] { min-width: 10rem; }
-.sat-table [data-col="shipBy"] { min-width: 8rem; }
-.sat-table [data-col="deployer"] { min-width: 13rem; }
-.sat-table [data-col="deployerMass"] { min-width: 8rem; }
+/* Every column wide enough for its own longest value, and no wider.
+   These were round numbers picked by eye, so some columns carried a lot of
+   empty space and others sat tight against their neighbour, which reads as
+   clumps with holes between them. Sized to content, the rhythm evens out and
+   the table is ~350px narrower, so less of it is behind a scroll. */
+.sat-table [data-col="name"] { min-width: 8rem; }          /* Aurora-1 */
+.sat-table [data-col="form"] { min-width: 7rem; }           /* header-bound */
+.sat-table [data-col="mass"] { min-width: 5.5rem; }         /* header-bound */
+.sat-table [data-col="dimensions"] { min-width: 11.5rem; }  /* 226.3 × 226.3 × 366 */
+.sat-table [data-col="orbit"] { min-width: 7rem; }          /* Polar LEO */
+.sat-table [data-col="inclination"] { min-width: 6.5rem; }  /* header-bound */
+.sat-table [data-col="altitude"] { min-width: 6rem; }       /* header-bound */
+.sat-table [data-col="ltan"] { min-width: 4.5rem; }         /* 10:30 */
+.sat-table [data-col="window"] { min-width: 10rem; }        /* Q3 2026 – Q4 2026 */
+.sat-table [data-col="propulsion"] { min-width: 10rem; }    /* Green monopropellant */
+.sat-table [data-col="readiness"] { min-width: 9rem; }      /* Integration & test */
+.sat-table [data-col="shipBy"] { min-width: 7rem; }         /* header-bound */
+.sat-table [data-col="deployer"] { min-width: 11rem; }      /* ISISPACE QuadPack */
+.sat-table [data-col="deployerMass"] { min-width: 9.5rem; } /* header-bound */
 
 /* the row's own actions stay reachable without scrolling fourteen columns */
 .sat-actions, .sat-actions-head {
