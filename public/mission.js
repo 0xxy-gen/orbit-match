@@ -1500,9 +1500,18 @@ function configuration() {
   } else {
     // Only offer Cosmo as a way forward when Cosmo has actually put something
     // on the page. Pointing at a box that is not there reads as a bug.
-    wrap.append(el('p', 'empty', cosmo(options).length
-      ? "Nothing added yet. Take a shape from Cosmo's suggestions below, or group them yourself."
-      : 'Nothing added yet. Group these satellites to say which of them could ride together.'));
+    // A notice, not a question.
+    //
+    // This was a gate at publish, then a choice between two answers here. Both
+    // were heavier than the fact: stating a grouping is optional, and it exists
+    // so sellers can see a preference. What silence means is said out loud, so
+    // leaving it empty is an informed choice rather than an oversight.
+    const notice = el('p', 'config-notice');
+    notice.append(
+      el('span', 'config-notice-mark', '!'),
+      document.createTextNode(`Set launch configuration preferences for ${row.name} if you want sellers to see how you would group these satellites. Without any, they will assume every grouping is acceptable.`),
+    );
+    wrap.append(notice);
   }
 
   const suggested = [...cosmo(ready), ...cosmo(conditional)];

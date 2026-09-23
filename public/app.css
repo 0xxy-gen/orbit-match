@@ -3406,6 +3406,34 @@ textarea.log-input {
 .config-group.clash .config-group-name { color: var(--danger-text); }
 
 
+/* what leaving this empty means, said out loud */
+.config-notice {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--wash);
+  color: var(--text-3);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.config-notice-mark {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  color: var(--surface);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+
 /* ranked by preference: first is favourite */
 .config-rank { display: grid; gap: 18px; }
 .config-rank > .config { position: relative; padding-left: 62px; }
