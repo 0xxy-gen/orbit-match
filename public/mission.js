@@ -525,7 +525,7 @@ function fitFor(listing, satellite) {
   return { ok: true };
 }
 
-function factLine(pairs) {
+function offerFacts(pairs) {
   const wrap = el('dl', 'offer-facts');
   for (const [label, value] of pairs) {
     if (!value) continue;
@@ -534,122 +534,136 @@ function factLine(pairs) {
   return wrap;
 }
 
-function launchCard(launch) {
-  const on = row.satellites.filter(satellite => satellite.launch === launch.id);
-  const listing = LISTINGS.find(each => each.launcher === launch.listing);
-
-  const group = el('section', 'launch-group');
-
-  // ── who, and what the flight is ──────────────────────────────────────────
-  const head = el('div', 'launch-head');
-  const titles = el('div');
-  const name = el('div', 'launch-name');
-  name.append(
-    el('span', 'launch-listing', launch.listing),
-    el('span', 'launch-seller', launch.seller),
-    el('span', `chip status ${launch.status.replace(/\s+/g, '-')}`, launch.status),
-  );
-
-  // Which of your configurations this launch is filling. A launch in
-  // procurement is not free-floating: it exists because a seller answered one
-  // of the shapes you stated.
-  // Which launch of which configuration this offer fills.
-  //
-  // Not just "Configuration A": A is two launches and this deal is one of them,
-  // so the configuration alone does not say which slot has been answered. And
-  // all of them, not the first — Aurora-T alone is Launch 2 of A and Launch 3
-  // of B, so a single offer can fill a slot in either.
-  //
-  // Exact, not a subset. A launch carrying one satellite out of a batch of two
-  // has not filled that batch, and saying it had would hide the gap.
+// Which launch of which configuration an offer fills.
+//
+// Not just "Configuration A": A is two launches and a deal answers one of them.
+// Exact, not a subset — a launch carrying one satellite out of a batch of two
+// has not filled that batch, and saying it had would hide the gap.
+function fillsFor(on) {
   const riding = new Set(on.map(satellite => satellite.name));
-  const fills = (row.configurations ?? [])
+  return (row.configurations ?? [])
     .filter(option => option.added)
     .flatMap(option => option.batches
       .map((names, at) => ({ option, at, names }))
       .filter(({ names }) => names.length === riding.size && names.every(who => riding.has(who))));
+}
 
-  for (const { option, at } of fills) {
-    const tag = el('a', 'launch-config');
-    tag.href = `/mission.html?id=${row.id}&view=${view}&tab=configuration`;
-    tag.textContent = `Configuration ${option.letter} · Launch ${at + 1}`;
-    name.append(tag);
-  }
+// ── one row per offer, because the job is comparing them ────────────────────
+//
+// This was a card each, a thousand pixels tall, so telling two offers apart
+// meant scrolling between them and holding the first in your head. The columns
+// are the things you actually weigh one against another; everything else opens
+// under the row it belongs to.
 
-  titles.append(name);
-  if (listing) {
-    titles.append(el('p', 'launch-meta', [
-      `${listing.sellerType} · ${listing.nation}`,
-      listing.site,
-      `${listing.orbit} ${listing.altitude} · ${listing.inclination}${listing.ltan && listing.ltan !== '—' ? ` · LTAN ${listing.ltan}` : ''}`,
-      listing.window,
-    ].join(' \u00b7 ')));
-  }
-  head.append(titles);
-  group.append(head);
+const OFFER_COLUMNS = ['Launch', 'Fills', 'Carrying', 'Orbit', 'Window', 'Price', 'Respond by', 'Status'];
 
-  // ── what it can take ─────────────────────────────────────────────────────
-  //
-  // The question the tab exists to answer. It was a manifest of what is
-  // already on the launch, which says nothing about the satellites that are
-  // not — and those are the ones you have a decision to make about.
-  const takes = el('div', 'offer-block');
+function offerRow(launch) {
+  const on = row.satellites.filter(satellite => satellite.launch === launch.id);
+  const listing = LISTINGS.find(each => each.launcher === launch.listing);
+  const fills = fillsFor(on);
+  const open = openPath.has(launch.id);
+
+  const line = el('tr', `offer-row${open ? ' open' : ''}`);
+
+  const cell = (className, top, under) => {
+    const td = el('td', className);
+    td.append(el('span', 'offer-top', top));
+    if (under) td.append(el('span', 'offer-under', under));
+    return td;
+  };
+
+  const first = cell('offer-name', launch.listing, launch.seller);
+  const mark = el('span', 'offer-caret', open ? '⌄' : '›');
+  first.prepend(mark);
+  line.append(first);
+
+  line.append(cell(null, fills.length
+    ? fills.map(({ option, at }) => `${option.letter} · Launch ${at + 1}`).join(', ')
+    : '—'));
+  line.append(cell(null, on.map(satellite => satellite.name).join(', ') || '—',
+    on.length ? `${on.reduce((sum, s) => sum + (Number(s.mass) || 0), 0)} kg` : null));
+  line.append(cell(null, listing ? `${listing.orbit} ${listing.altitude}` : '—',
+    listing ? `${listing.inclination}${listing.ltan && listing.ltan !== '—' ? ` · ${listing.ltan}` : ''}` : null));
+  line.append(cell(null, listing?.window ?? launch.window));
+  line.append(cell('offer-num', listing?.price ?? '—'));
+  line.append(cell(null, listing?.respondBy ?? '—'));
+
+  const state = el('td', 'offer-state');
+  state.append(el('span', `chip status ${launch.status.replace(/\s+/g, '-')}`, launch.status));
+  if (launch.detail) state.append(el('span', 'offer-under', launch.detail));
+  line.append(state);
+
+  line.tabIndex = 0;
+  line.setAttribute('role', 'button');
+  line.setAttribute('aria-expanded', String(open));
+  const toggle = () => {
+    if (open) openPath.delete(launch.id);
+    else openPath.set(launch.id, {});
+    render();
+  };
+  line.addEventListener('click', toggle);
+  line.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); }
+  });
+
+  return { line, open, on, listing, fills };
+}
+
+function offerDetail(launch, { on, listing, fills }) {
+  const line = el('tr', 'offer-detail');
+  const cell = el('td');
+  cell.colSpan = OFFER_COLUMNS.length;
+
+  const grid = el('div', 'offer-panels');
+
+  // what it can take, including what it cannot and why
+  const takes = el('section', 'offer-panel');
   takes.append(el('h4', 'offer-heading', 'What it can take'));
   if (fills.length) {
     takes.append(el('p', 'offer-fills',
-      `Fills ${fills.map(({ option, at, names }) =>
-        `Launch ${at + 1} of Configuration ${option.letter}`).join(' and ')} — ${[...riding].join(' and ')}.`));
+      `Fills ${fills.map(({ option, at }) => `Launch ${at + 1} of Configuration ${option.letter}`).join(' and ')}.`));
   }
-
-  const list = el('ul', 'offer-sats');
+  const sats = el('ul', 'offer-sats');
   for (const satellite of row.satellites) {
     const booked = satellite.launch === launch.id;
     const fit = fitFor(listing, satellite);
-    const line = el('li', `offer-sat${booked ? ' on' : fit.ok ? ' could' : ' no'}`);
-    line.append(el('span', 'offer-sat-name', satellite.name));
-    line.append(el('span', 'offer-sat-say', booked
-      ? `on this launch · ${satellite.mass} kg`
-      : fit.ok ? `could ride · ${satellite.mass} kg`
-      : `cannot ride — ${fit.why}`));
-    list.append(line);
+    const item = el('li', `offer-sat${booked ? ' on' : fit.ok ? ' could' : ' no'}`);
+    item.append(
+      el('span', 'offer-sat-name', satellite.name),
+      el('span', 'offer-sat-say', booked ? `on this launch · ${satellite.mass} kg`
+        : fit.ok ? `could ride · ${satellite.mass} kg`
+        : `cannot ride — ${fit.why}`),
+    );
+    sats.append(item);
   }
-  takes.append(list);
-
+  takes.append(sats);
   if (listing) {
-    takes.append(factLine([
-      ['Ports', `${listing.ports}, up to ${listing.massPerPort} kg each`],
+    takes.append(offerFacts([
+      ['Ports', `${listing.ports} × up to ${listing.massPerPort} kg`],
       ['Spare capacity', `${listing.spareMass} kg`],
       ['Deployers', listing.deployers.join(', ')],
     ]));
   }
-  group.append(takes);
+  grid.append(takes);
 
-  // ── terms ────────────────────────────────────────────────────────────────
   if (listing) {
-    const terms = el('div', 'offer-block');
-    terms.append(el('h4', 'offer-heading', 'Terms'));
-    terms.append(factLine([
-      ['Offer', `${listing.offer}${listing.confirmed ? ' · flight confirmed' : ' · flight tentative'}`],
-      ['Price', listing.price],
-      ['Respond by', listing.respondBy],
-      ['Payload delivery', `${listing.delivery} (${listing.lMinus})`],
+    const terms = el('section', 'offer-panel');
+    terms.append(el('h4', 'offer-heading', 'Terms and services'));
+    terms.append(offerFacts([
+      ['Offer', `${listing.offer} · flight ${listing.confirmed ? 'confirmed' : 'tentative'}`],
+      ['Launch site', listing.site],
       ['Integration', listing.integration.join(' or ')],
+      ['Payload delivery', `${listing.delivery} (${listing.lMinus})`],
       ['Rebooking', listing.rebooking],
       ['In the price', listing.included.join(', ')],
       ['Add-ons', listing.addOns.join(', ')],
     ]));
-    group.append(terms);
+    grid.append(terms);
   }
 
-  // ── where it stands ──────────────────────────────────────────────────────
-  const where = el('div', 'offer-block');
+  const where = el('section', 'offer-panel wide');
   where.append(el('h4', 'offer-heading', 'Where it stands'));
   where.append(launchTrack(launch));
-  if (launch.detail) where.append(el('p', 'launch-detail', launch.detail));
-
-  // The road, here rather than behind an "Open deal" link. It shows the step
-  // just done, the one running, and the one next, with the rest folded into a
-  // count at either end.
   const marks = launch.listing === DEAL.listing ? DEAL.marks : {};
   const seen = openPath.get(launch.id) ?? {};
   where.append(stepWindow(stepsFor(launch.reached, marks), {
@@ -658,14 +672,33 @@ function launchCard(launch) {
     onEarlier: () => { openPath.set(launch.id, { ...seen, earlier: true }); render(); },
     onLater: () => { openPath.set(launch.id, { ...seen, later: true }); render(); },
   }));
-  group.append(where);
+  grid.append(where);
 
-  return group;
+  cell.append(grid);
+  line.append(cell);
+  return line;
 }
 
 function launches() {
-  const wrap = el('div', 'mission-panel launch-groups');
-  for (const launch of row.launches ?? []) wrap.append(launchCard(launch));
+  const wrap = el('div', 'mission-panel');
+
+  if ((row.launches ?? []).length) {
+    const table = el('table', 'offer-table');
+    const head = el('thead');
+    const headRow = el('tr');
+    for (const label of OFFER_COLUMNS) headRow.append(el('th', null, label));
+    head.append(headRow);
+    table.append(head);
+
+    const body = el('tbody');
+    for (const launch of row.launches) {
+      const built = offerRow(launch);
+      body.append(built.line);
+      if (built.open) body.append(offerDetail(launch, built));
+    }
+    table.append(body);
+    wrap.append(el('div', 'sat-scroll').appendChild(table).parentElement);
+  }
 
   const loose = row.satellites.filter(satellite => !satellite.launch);
   if (loose.length) {
@@ -1223,8 +1256,15 @@ function configuration() {
     wrap.append(grouper(grouping, saved => {
       if (saved) {
         const at = options.findIndex(option => option.id === grouping.id);
-        if (at >= 0) Object.assign(options[at], saved);
-        else options.push({ id: `own-${Date.now()}`, added: true, letter: freeLetter(options), ...saved });
+        if (at >= 0) {
+          Object.assign(options[at], saved);
+          log({ event: 'ConfigurationUpdated',
+            text: `Configuration ${options[at].letter} regrouped — ${shapeOf(options[at])}.` });
+        } else {
+          const made = { id: `own-${Date.now()}`, added: true, letter: freeLetter(options), ...saved };
+          options.push(made);
+          log({ event: 'ConfigurationUpdated', text: `Configuration ${made.letter} added — ${shapeOf(made)}.` });
+        }
         say('Saved to this session only. The prototype stores nothing.');
       }
       grouping = null;
@@ -1266,7 +1306,15 @@ function configuration() {
   // while a letter cannot say anything untrue. Why you keep a configuration
   // goes in its note, which describes intent rather than shape and so survives
   // the shape changing.
-  const move = (option, by) => { moveWithin(options, option, by); render(); };
+  const shapeOf = option => option.batches
+    .map((names, at) => `Launch ${at + 1}: ${names.join(' + ')}`).join('; ');
+
+  const move = (option, by) => {
+    moveWithin(options, option, by);
+    const order = options.filter(each => each.added).map(each => each.letter).join(', ');
+    log({ event: 'ConfigurationUpdated', text: `Preference order is now ${order}.` });
+    render();
+  };
 
   const letter = option => `Configuration ${option.letter ?? '?'}`;
 
@@ -1343,11 +1391,15 @@ function configuration() {
       if (!option.added) {
         option.added = true;
         option.letter = option.letter ?? freeLetter(options);
-      } else if (option.from) {
-        // came from Cosmo, so it goes back to the box rather than vanishing
-        option.added = false;
+        log({ event: 'ConfigurationUpdated', text: `Configuration ${option.letter} added — ${shapeOf(option)}.` });
       } else {
-        options.splice(options.indexOf(option), 1);
+        log({ event: 'ConfigurationUpdated', text: `Configuration ${option.letter} removed.` });
+        if (option.from) {
+          // came from Cosmo, so it goes back to the box rather than vanishing
+          option.added = false;
+        } else {
+          options.splice(options.indexOf(option), 1);
+        }
       }
       render();
     });
