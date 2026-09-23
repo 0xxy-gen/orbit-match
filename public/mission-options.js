@@ -43,16 +43,81 @@ export const quarterParts = value => {
 export const quarterValue = (quarter, year) =>
   (quarter && year ? `Q${quarter} ${year}` : '');
 
-// A satellite can be compatible with several, so these are checkboxes, not a
-// list to pick one from: compatibility is the set of ways it can be deployed.
+// What a satellite can actually be deployed by.
+//
+// The first version of this list was wrong in a way worth recording: it mixed
+// port classes (ESPA Grande) with CubeSat sizes (6U dispenser) and named almost
+// no real hardware. "6U dispenser" is not a product — it is a size, and half a
+// dozen vendors make one. A buyer ticking it has told a seller nothing about
+// which interface their spacecraft actually mates to.
+//
+// So the list is grouped by the question being answered. A CubeSat asks which
+// dispenser it fits inside; a microsat asks which port or separation system it
+// bolts to. Those are different conversations and a satellite is usually in
+// exactly one of them.
+//
+// TODO: the products are real and current, but the sizes and mass limits move
+// with each revision — check these against live datasheets before launch, and
+// expect the list to need adding to. It is deliberately not exhaustive.
+//
+// The size sits beside the name rather than inside it. A dispenser's capacity
+// and a ring's bolt circle are what decide whether a spacecraft physically
+// fits, so they have to be visible while choosing — but the match is made on
+// the hardware, and folding "24 in" into the label would make the label the
+// key and break the moment a vendor adds a size.
 export const DEPLOYERS = [
-  { value: 'espa-grande', label: 'ESPA Grande' },
-  { value: 'espa-ring', label: 'ESPA Ring' },
-  { value: 'csd', label: 'CSD' },
-  { value: '12u', label: '12U dispenser' },
-  { value: '16u', label: '16U dispenser' },
-  { value: 'custom', label: 'Custom / to be discussed' },
+  // CubeSats ride inside a dispenser, so the question is capacity
+  { value: 'exopod-nova', label: 'Exolaunch EXOpod Nova', size: 'up to 16U', group: 'CubeSat dispensers' },
+  { value: 'exopod', label: 'Exolaunch EXOpod', size: 'up to 12U', group: 'CubeSat dispensers' },
+  { value: 'quadpack', label: 'ISISPACE QuadPack', size: 'up to 12U', group: 'CubeSat dispensers' },
+  { value: 'csd', label: 'Rocket Lab CSD', size: '3U / 6U / 12U / 27U', group: 'CubeSat dispensers' },
+  { value: 'spl', label: 'Astrofein SPL', size: '1U – 3U', group: 'CubeSat dispensers' },
+  { value: 'any-dispenser', label: 'Any standard CubeSat dispenser', size: 'to be agreed', group: 'CubeSat dispensers' },
+
+  // Larger spacecraft bolt to a port, so the question is the bolt circle
+  { value: 'espa', label: 'ESPA port', size: '15 in / 381 mm', group: 'Ports & separation systems' },
+  { value: 'espa-grande', label: 'ESPA Grande port', size: '24 in / 610 mm', group: 'Ports & separation systems' },
+  { value: 'lightband', label: 'Rocket Lab Motorized Lightband', size: '8 – 24 in', group: 'Ports & separation systems' },
+  { value: 'carbonix', label: 'Exolaunch CarboNIX', size: '8 / 11 / 15 / 24 in', group: 'Ports & separation systems' },
+  { value: 'clampband', label: 'Clamp band', size: '937 / 1194 mm', group: 'Ports & separation systems' },
+
 ];
+
+// Three ways to answer the deployer question, only one of which is a list.
+//
+// "Custom" and "Not yet decided" were options fourteen and fifteen in the list
+// above, which made no sense: a satellite cannot be compatible with an EXOpod
+// Nova *and* undecided, and ticking a bespoke clamp band alongside three
+// standard dispensers says nothing a seller can act on. They are not items —
+// they are answers that replace the list, so they replace the list.
+export const DEPLOYER_MODES = [
+  { value: 'list', label: 'Pick from the list' },
+  { value: 'custom', label: 'A custom interface' },
+  // A concept-stage mission genuinely does not know yet, and forcing a guess
+  // puts a wrong answer into a field a match is decided on. This tells a seller
+  // to ask rather than to assume.
+  { value: 'tbd', label: 'Not yet decided' },
+];
+
+// What a stored deployer string means, for records written before the modes
+// existed.
+export const deployerMode = written => {
+  const text = String(written ?? '').trim().toLowerCase();
+  if (!text || text.startsWith('not yet')) return 'tbd';
+  if (text.startsWith('custom')) return 'custom';
+  return 'list';
+};
+
+// The options in the order they should be shown, grouped.
+export const grouped = list => {
+  const out = new Map();
+  for (const option of list) {
+    const name = option.group ?? '';
+    if (!out.has(name)) out.set(name, []);
+    out.get(name).push(option);
+  }
+  return [...out];
+};
 
 export const labelFor = (list, value) => list.find(option => option.value === value)?.label ?? '';
 
@@ -74,6 +139,8 @@ export const FLEXIBILITY = [
   { value: 'window', label: 'Launch window', description: 'Could fly a quarter earlier or later.' },
   { value: 'altitude', label: 'Altitude', description: 'A different altitude in the same regime works.' },
   { value: 'inclination', label: 'Inclination', description: 'A degree or two either side is acceptable.' },
+  { value: 'ltan', label: 'LTAN', description: 'A different local time at the ascending node works.' },
+  { value: 'ship', label: 'Ship date', description: 'Could have the spacecraft at the site earlier or later.' },
   { value: 'mass', label: 'Mass and envelope', description: 'Could trim the spacecraft to fit a tighter ride.' },
 ];
 
@@ -91,7 +158,9 @@ export const FLEXIBILITY = [
 // editable after the pick. Masses are the usual per-dispenser ceilings, shown
 // as guidance only — nothing here rejects a heavier spacecraft.
 export const FORM_FACTORS = [
-  { value: 'custom', label: 'Custom / not a CubeSat' },
+  // No default. A pre-selected "Custom" is the form answering its own question,
+  // and it makes every satellite look one field further along than it is.
+  { value: 'custom', label: 'Not a CubeSat' },
   { value: '1U', label: '1U', dims: [100, 100, 113.5], mass: 2 },
   { value: '2U', label: '2U', dims: [100, 100, 227], mass: 4 },
   { value: '3U', label: '3U', dims: [100, 100, 340.5], mass: 6 },
@@ -431,3 +500,39 @@ export const ORBIT_TYPES = [
 ];
 
 export const orbitType = value => ORBIT_TYPES.find(option => option.value === value);
+
+// Label back to value.
+//
+// The demo fixtures store what a field looks like ("United Kingdom", "Cold
+// gas") rather than what it is ("GB", "cold-gas"), so opening a saved mission
+// in the form means translating back. A real record stores the code and this
+// goes away — it is here because the fixture is a display artefact, and that is
+// worth fixing in the schema rather than papering over twice.
+const head = label => String(label ?? '').split('—')[0].split('/')[0].trim().toLowerCase();
+
+export function valueFor(list, label) {
+  if (!label) return '';
+  const wanted = head(label);
+  const hit = list.find(option => head(option.label) === wanted)
+    ?? list.find(option => option.value.toLowerCase() === wanted);
+  return hit?.value ?? '';
+}
+
+// LTAN is a clock, so the field behaves like one.
+//
+// Free text lets someone produce "1030", "10.30" or "10:3 0" — all of which
+// read fine to a person and none of which a matcher can compare. The colon is
+// structure rather than input: digits are all you type, and the separator is
+// placed for you and cannot be deleted on its own.
+export function maskClock(input) {
+  const format = () => {
+    const digits = input.value.replace(/\D/g, '').slice(0, 4);
+    input.value = digits.length > 2 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : digits;
+  };
+  input.inputMode = 'numeric';
+  input.maxLength = 5;
+  input.placeholder = input.placeholder || '10:30';
+  input.addEventListener('input', format);
+  format();
+  return input;
+}

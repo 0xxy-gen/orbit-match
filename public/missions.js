@@ -120,7 +120,9 @@ function missionRow(row) {
       ['Target budget', row.budget],
       ['Country of manufacture', row.country],
       ['State of registry', row.registration],
-      ['Export control status', row.exportControl],
+      ['Export control status', row.exportControlOther
+        ? `${row.exportControl} \u2014 ${row.exportControlOther}`
+        : row.exportControl],
       ['Ride preference', row.ride],
       ['Can flex on', row.flexibility?.length ? row.flexibility.join(', ') : 'Nothing'],
       ['Satellites', String(row.satellites.length)],

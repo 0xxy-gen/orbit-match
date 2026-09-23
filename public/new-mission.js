@@ -17,8 +17,9 @@
 import {
   EXPORT_CONTROL, RIDE_PREFERENCES, DEPLOYERS, FLEXIBILITY, FORM_FACTORS,
   PROPULSION, READINESS, COUNTRIES, ORBIT_TYPES, orbitType, WINDOW_YEARS,
-  quarterParts, quarterValue, labelFor,
+  quarterParts, quarterValue, labelFor, valueFor, maskClock, grouped, DEPLOYER_MODES,
 } from './mission-options.js';
+import { MISSION_ROWS } from './demo-data.js';
 import { validateMission } from './validate.js';
 import { assistant, toggleAssistant, openAssistant } from './assistant.js';
 import { documentIntake } from './intake-assist.js';
@@ -39,10 +40,15 @@ let view = new URLSearchParams(location.search).get('view') ?? read(STORE_VIEW) 
 view = LEGACY[view] ?? view;
 if (view !== 'buy' && view !== 'sell') view = 'buy';
 
+// One form, two modes. ?id= turns New mission into Edit mission rather than
+// building a second set of fourteen satellite fields somewhere else — two
+// copies of a form is two places for a field to be forgotten.
+const editing = MISSION_ROWS[view]?.find(row => row.id === new URLSearchParams(location.search).get('id')) ?? null;
+
 const form = document.getElementById('mission');
 const list = document.getElementById('satellites');
 
-const MISSION_FIELDS = ['name', 'objective', 'budget', 'country', 'registration', 'exportControl', 'ride'];
+const MISSION_FIELDS = ['name', 'objective', 'budget', 'sellerNotes', 'country', 'registration', 'exportControl', 'ride'];
 
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -54,9 +60,10 @@ const el = (tag, className, text) => {
 // ── the satellites, which are the part that repeats ─────────────────────────
 
 const blank = () => ({
-  name: '', form: 'custom', mass: '', length: '', width: '', height: '',
+  name: '', form: '', mass: '', length: '', width: '', height: '',
   orbit: '', inclination: '', altitude: '', ltan: '', windowFrom: '', windowTo: '', deployers: [],
-  propulsion: '', propulsionOther: '', readiness: '', shipBy: '', deployerOther: '',
+  propulsion: '', propulsionOther: '', readiness: '', shipBy: '',
+  deployerMode: 'list', deployerOther: '',
   suppliesDeployer: false, deployerMass: '',
 });
 
@@ -253,7 +260,8 @@ function satelliteBlock(satellite, index) {
   fold.setAttribute('aria-expanded', String(shown));
   const caret = el('span', 'sat-caret');
   caret.innerHTML = '<svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5 8 6l-4 3.5"/></svg>';
-  fold.append(caret, el('span', 'sat-block-n', satellite.name || `Satellite ${index + 1}`));
+  fold.append(caret, el('span', `sat-block-n${satellite.name ? ' named' : ''}`,
+    satellite.name || `Satellite ${index + 1}`));
   if (!shown) {
     const line = summarise(satellite);
     fold.append(el('span', 'sat-block-sum', line || 'Nothing entered yet'));
@@ -291,6 +299,12 @@ function satelliteBlock(satellite, index) {
 
   if (!shown) return block;
 
+  // Twelve fields at identical weight is a wall. Three quiet groups — what it
+  // is, where it is going, what it takes to get it there — give the eye
+  // somewhere to rest without adding a single new control.
+  const group = name => block.append(el('p', 'sat-group', name));
+  group('Physical');
+
   // name
   const nameField = el('div', 'field');
   const nameId = `sat-${index}-name`;
@@ -317,8 +331,10 @@ function satelliteBlock(satellite, index) {
   formLabel.htmlFor = formId;
   const formSelect = el('select');
   formSelect.id = formSelect.name = formId;
+  formSelect.add(new Option('Choose a size', ''));
   for (const { value, label } of FORM_FACTORS) formSelect.add(new Option(label, value));
-  formSelect.value = satellite.form ?? 'custom';
+  formSelect.value = satellite.form ?? '';
+  formSelect.classList.toggle('placeholder', !formSelect.value);
   const formHint = el('p', 'hint');
   formHint.id = `${formId}-hint`;
   formSelect.setAttribute('aria-describedby', formHint.id);
@@ -327,12 +343,13 @@ function satelliteBlock(satellite, index) {
     const chosen = FORM_FACTORS.find(option => option.value === formSelect.value);
     formHint.textContent = chosen?.dims
       ? `Standard ${chosen.label} envelope, filled in below — edit it if yours differs. Dispensers usually cap a ${chosen.label} at about ${chosen.mass} kg.`
-      : 'Choose a CubeSat size to fill the dimensions, or enter them yourself.';
+      : 'A CubeSat size fills the dimensions below. Anything else, enter them yourself.';
   };
   describeForm();
 
   formSelect.addEventListener('change', () => {
     satellite.form = formSelect.value;
+    formSelect.classList.toggle('placeholder', !formSelect.value);
     const chosen = FORM_FACTORS.find(option => option.value === formSelect.value);
     if (chosen?.dims) {
       [satellite.length, satellite.width, satellite.height] = chosen.dims.map(String);
@@ -343,7 +360,11 @@ function satelliteBlock(satellite, index) {
     }
     describeForm();
   });
-  formField.append(formLabel, formSelect, formHint);
+  const formError = el('p', 'error');
+  formError.id = `${formId}-error`;
+  formError.setAttribute('aria-live', 'polite');
+  formSelect.setAttribute('aria-describedby', `${formHint.id} ${formError.id}`);
+  formField.append(formLabel, formSelect, formHint, formError);
   block.append(formField);
 
   // dimensions: three boxes, because that is three numbers
@@ -379,14 +400,19 @@ function satelliteBlock(satellite, index) {
     error.setAttribute('aria-live', 'polite');
     // three identical boxes need to say which is which on the page, not only
     // to a screen reader
-    wrap.append(input, el('span', 'dim-tag', side[0].toUpperCase()), error);
+    wrap.append(el('span', 'dim-tag', side[0].toUpperCase()), input, error);
     boxes.append(wrap);
     if (side !== 'height') boxes.append(el('span', 'dim-x', '×'));
   }
   dims.append(boxes);
   block.append(dims);
 
+  const [massKey, massLabel, massPlaceholder, massBounds, massHint] = MASS;
+  block.append(numberField(index, massKey, massLabel, massPlaceholder, massBounds, massHint));
+
   // the orbit numbers
+  group('Orbit');
+
   // the orbit first, because it is what the two numbers below it mean
   block.append(selectField(satellite, index, 'orbit', 'Orbit type', ORBIT_TYPES, 'Choose an orbit', () => {
     const type = orbitType(satellite.orbit);
@@ -402,8 +428,8 @@ function satelliteBlock(satellite, index) {
     block.append(note);
   }
 
-  const row = el('div', 'row three');
-  for (const [key, label, placeholder, bounds, hint] of [MASS, ...orbitNumbers(satellite)]) {
+  const row = el('div', 'row');
+  for (const [key, label, placeholder, bounds, hint] of orbitNumbers(satellite)) {
     row.append(numberField(index, key, label, placeholder, bounds, hint));
   }
   block.append(row);
@@ -418,10 +444,9 @@ function satelliteBlock(satellite, index) {
   const ltan = el('input');
   ltan.id = ltan.name = ltanId;
   ltan.type = 'text';
-  ltan.maxLength = 5;
-  ltan.inputMode = 'numeric';
   ltan.placeholder = '10:30';
   ltan.value = satellite.ltan;
+  maskClock(ltan);
   ltan.setAttribute('aria-describedby', `${ltanId}-hint ${ltanId}-error`);
   ltan.addEventListener('input', () => { satellite.ltan = ltan.value; setError(ltanId, ''); });
   const ltanHint = el('p', 'hint');
@@ -506,6 +531,8 @@ function satelliteBlock(satellite, index) {
   windowField.append(range);
   block.append(windowField);
 
+  group('Logistics');
+
   // Propulsion and readiness: the two things that decide whether a launch can
   // carry you at all, rather than how well it fits.
   const row3 = el('div', 'row');
@@ -546,63 +573,121 @@ function satelliteBlock(satellite, index) {
   shipField.append(shipLabel, ship, shipHint, shipError);
   block.append(shipField);
 
-  // deployers: a set, so checkboxes
+  // Deployer compatibility: one question, three ways to answer it.
+  //
+  // The list is only one of them. Choosing a custom interface or saying you have
+  // not decided replaces the list rather than adding to it, because a satellite
+  // cannot be compatible with an EXOpod Nova and undecided at the same time.
   const deployerField = el('div', 'field');
   const deployerId = `sat-${index}-deployers`;
   deployerField.append(el('span', 'field-label', 'Deployer compatibility'));
-  const boxesWrap = el('div', 'deployers');
-  boxesWrap.id = deployerId;
-  for (const { value, label } of DEPLOYERS) {
+
+  const modes = el('div', 'supply-choices');
+  for (const mode of DEPLOYER_MODES) {
     const choice = el('label', 'tick');
-    const box = el('input');
-    box.type = 'checkbox';
-    box.value = value;
-    box.checked = satellite.deployers.includes(value);
-    box.addEventListener('change', () => {
-      satellite.deployers = box.checked
-        ? [...satellite.deployers, value]
-        : satellite.deployers.filter(item => item !== value);
+    const dot = el('input');
+    dot.type = 'radio';
+    dot.name = `${deployerId}-mode`;
+    dot.checked = (satellite.deployerMode ?? 'list') === mode.value;
+    dot.addEventListener('change', () => {
+      satellite.deployerMode = mode.value;
+      if (mode.value !== 'list') satellite.deployers = [];
+      if (mode.value !== 'custom') satellite.deployerOther = '';
       setError(deployerId, '');
-      if (value === 'custom') renderSatellites();
+      renderSatellites();
     });
-    choice.append(box, el('span', null, label));
-    boxesWrap.append(choice);
+    choice.append(dot, el('span', null, mode.label));
+    modes.append(choice);
   }
+  deployerField.append(modes);
+
+  const mode = satellite.deployerMode ?? 'list';
+
+  if (mode === 'list') {
+    const boxesWrap = el('div', 'deployers');
+    boxesWrap.id = deployerId;
+    // Grouped, because a CubeSat is asking which dispenser it fits inside and a
+    // microsat is asking which port it bolts to.
+    for (const [name, options] of grouped(DEPLOYERS)) {
+      if (name) boxesWrap.append(el('p', 'deployer-group', name));
+      const set = el('div', 'deployer-set');
+      for (const { value, label, size } of options) {
+        const choice = el('label', 'tick');
+        const box = el('input');
+        box.type = 'checkbox';
+        box.value = value;
+        box.checked = satellite.deployers.includes(value);
+        box.addEventListener('change', () => {
+          satellite.deployers = box.checked
+            ? [...satellite.deployers, value]
+            : satellite.deployers.filter(item => item !== value);
+          setError(deployerId, '');
+        });
+        const text = el('span', 'tick-text');
+        text.append(el('span', null, label));
+        if (size) text.append(el('span', 'tick-size', size));
+        choice.append(box, text);
+        set.append(choice);
+      }
+      boxesWrap.append(set);
+    }
+    deployerField.append(boxesWrap);
+  }
+
+  if (mode === 'custom') {
+    const other = el('input');
+    other.id = other.name = `sat-${index}-deployerOther`;
+    other.type = 'text';
+    other.maxLength = 120;
+    other.placeholder = 'e.g. bespoke clamp band, 24 in diameter';
+    other.value = satellite.deployerOther;
+    other.setAttribute('aria-label', 'Which interface?');
+    other.addEventListener('input', () => {
+      satellite.deployerOther = other.value;
+      setError(`sat-${index}-deployerOther`, '');
+    });
+    const error = el('p', 'error');
+    error.id = `sat-${index}-deployerOther-error`;
+    error.setAttribute('aria-live', 'polite');
+    deployerField.append(other, error);
+  }
+
+  if (mode === 'tbd') {
+    deployerField.append(el('p', 'hint',
+      'A seller will ask. Until it is decided, this satellite is matched on its size and mass alone.'));
+  }
+
   const deployerError = el('p', 'error');
   deployerError.id = `${deployerId}-error`;
   deployerError.setAttribute('aria-live', 'polite');
-  deployerField.append(boxesWrap, deployerError);
+  deployerField.append(deployerError);
   block.append(deployerField);
 
-  if (satellite.deployers.includes('custom')) {
-    block.append(revealField({
-      id: `sat-${index}-deployerOther`,
-      label: 'Which interface?',
-      placeholder: 'e.g. bespoke clamp band, 24 in diameter',
-      value: satellite.deployerOther,
-      onInput: written => { satellite.deployerOther = written; },
-    }));
-  }
+  // Its own question, with its own rule above it. As a fourteenth tick under
+  // the compatibility list it read as another interface you might be
+  // compatible with, when it is asking something else entirely: who brings the
+  // hardware. A pair of options also makes the default visible — most of the
+  // time the provider supplies it, and that should be something you can see
+  // rather than infer from an empty checkbox.
+  const supplyWrap = el('div', 'field supply-field');
+  supplyWrap.append(el('span', 'field-label', 'Who supplies the deployer?'));
 
-  // Who supplies the deployer, and what it weighs.
-  //
-  // This is the ambiguity people try to solve with an "includes deployer" tick
-  // on the mass field. A tick gives one number two meanings, so every reader
-  // downstream has to branch on it and nothing catches a mis-tick — 68 kg and
-  // 80 kg both look reasonable. Asking for the kilograms instead keeps the
-  // spacecraft mass meaning one thing and makes the total addable.
-  const supplyWrap = el('div', 'field');
-  const supply = el('label', 'tick');
-  const supplyBox = el('input');
-  supplyBox.type = 'checkbox';
-  supplyBox.checked = satellite.suppliesDeployer;
-  supplyBox.addEventListener('change', () => {
-    satellite.suppliesDeployer = supplyBox.checked;
-    if (!supplyBox.checked) satellite.deployerMass = '';
-    renderSatellites();
-  });
-  supply.append(supplyBox, el('span', null, 'I supply the deployer'));
-  supplyWrap.append(supply);
+  const choices = el('div', 'supply-choices');
+  for (const [mine, label] of [[false, 'The launch provider'], [true, 'I do']]) {
+    const choice = el('label', 'tick');
+    const dot = el('input');
+    dot.type = 'radio';
+    dot.name = `sat-${index}-supply`;
+    dot.checked = Boolean(satellite.suppliesDeployer) === mine;
+    dot.addEventListener('change', () => {
+      satellite.suppliesDeployer = mine;
+      if (!mine) satellite.deployerMass = '';
+      renderSatellites();
+    });
+    choice.append(dot, el('span', null, label));
+    choices.append(choice);
+  }
+  supplyWrap.append(choices);
   block.append(supplyWrap);
 
   if (satellite.suppliesDeployer) {
@@ -690,6 +775,7 @@ function renderSatellites() {
   list.replaceChildren(...satellites.map(satelliteBlock));
   satellites.forEach((_, index) => syncLtan(index));
   tally();
+  if (typeof drawRail === 'function') drawRail();
   // A block that was already complained about keeps its messages through a
   // re-render; a new one starts clean.
   if (touched.size) paintSatelliteErrors();
@@ -867,9 +953,10 @@ function showSummary(input, missionStatus) {
   icon.setAttribute('aria-hidden', 'true');
   icon.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-  card.append(icon, el('h2', null, input.name
-    ? `${input.name} — ${missionStatus === 'Draft' ? 'saved as a draft' : 'published'}`
-    : missionStatus === 'Draft' ? 'Saved as a draft' : 'Published'));
+  const verb = editing
+    ? (missionStatus === 'Draft' ? 'unpublished' : 'updated')
+    : (missionStatus === 'Draft' ? 'saved as a draft' : 'published');
+  card.append(icon, el('h2', null, input.name ? `${input.name} — ${verb}` : `Mission ${verb}`));
 
   const filled = satellites.filter(satellite => Object.values(satellite).some(value => value.length));
   card.append(el('p', 'muted', missionStatus === 'Draft'
@@ -880,6 +967,7 @@ function showSummary(input, missionStatus) {
   const rows = [
     ['Objective', input.objective],
     ['Target budget', input.budget ? `$${input.budget}` : ''],
+    ['Notes to sellers', input.sellerNotes],
     ['Country of manufacture', labelFor(COUNTRIES, input.country)],
     ['State of registry', labelFor(COUNTRIES, input.registration)],
     ['Export control', input.exportControl === 'other' && exportOther
@@ -901,10 +989,12 @@ function showSummary(input, missionStatus) {
   if (rows.length) card.append(summary);
   else card.querySelector('.muted').textContent = 'You left the form blank, which is fine here.';
 
-  const back = el('a', 'submit', 'Back to Missions');
-  back.href = `/missions.html?view=${view}`;
-  const again = el('a', 'submit secondary', 'Add another mission');
-  again.href = '/new-mission.html';
+  const back = el('a', 'submit', editing ? `Back to ${editing.name}` : 'Back to Missions');
+  back.href = editing
+    ? `/mission.html?id=${encodeURIComponent(editing.id)}&view=${view}`
+    : `/missions.html?view=${view}`;
+  const again = el('a', 'submit secondary', editing ? 'Keep editing' : 'Add another mission');
+  again.href = editing ? location.href : '/new-mission.html';
   card.append(back, again, el('p', 'prototype-note', 'Prototype — nothing was saved.'));
 
   document.getElementById('form-wrap').replaceChildren(card);
@@ -939,7 +1029,7 @@ function applyProposals(proposals) {
   form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-document.getElementById('form-wrap').insertBefore(
+form.parentNode.insertBefore(
   documentIntake({
     onApply: applyProposals,
     onAsk: () => openAssistant('I have an RFI for a new mission. Read it and fill in the intake form for me.'),
@@ -947,7 +1037,255 @@ document.getElementById('form-wrap').insertBefore(
   form,
 );
 
+// ── the rail: where you are in a form four screens long ────────────────────
+//
+// The page is long because the data is, and the fix for a long form is not a
+// second column — two columns leave the eye with no obvious path and put tab
+// order at odds with the layout. It is orientation: what the sections are, how
+// far down you have got, and what is still empty.
+//
+// Completion is counted, not asserted: a section is done when every control in
+// it holds something. That makes the rail a checklist you can trust rather than
+// decoration, and it is the same count whether or not submission is blocked.
+
+const rail = document.getElementById('rail');
+
+function sectionState(fieldset) {
+  const controls = [...fieldset.querySelectorAll('input, select')].filter(node =>
+    node.type !== 'checkbox'
+    && node.type !== 'radio'
+    && !node.disabled
+    // a follow-up that is not showing is not a field you owe an answer to, and
+    // counting it leaves a section stuck one short of complete
+    && !node.closest('[hidden]'));
+  const filled = controls.filter(node => node.value.trim()).length;
+  const radios = [...fieldset.querySelectorAll('input[type="radio"]')];
+  const radioGroups = new Set(radios.map(node => node.name));
+  const radiosDone = [...radioGroups].every(name => fieldset.querySelector(`input[name="${name}"]:checked`));
+  return {
+    filled: filled + (radioGroups.size && radiosDone ? 1 : 0),
+    total: controls.length + radioGroups.size,
+  };
+}
+
+// A satellite is finished when nothing in it is still owed. Counting finished
+// satellites beats counting fields: "1/17" before you have typed anything is
+// both wrong — the 17th was the form's own default — and discouraging, and it
+// multiplies by every satellite you add.
+function satelliteProgress() {
+  const { fields } = validateMission(Object.fromEntries(new FormData(form)), satellites);
+  const done = satellites.filter((_, index) =>
+    !Object.keys(fields).some(key => key.startsWith(`sat-${index}-`))).length;
+  return { filled: done, total: satellites.length };
+}
+
+function drawRail() {
+  const sections = [...form.querySelectorAll('fieldset')];
+  rail.replaceChildren();
+
+  const list = el('ol', 'rail-steps');
+  sections.forEach((fieldset, index) => {
+    const legend = fieldset.querySelector('legend');
+    const name = legend.textContent.replace(/^\d+/, '').trim();
+    const repeats = Boolean(fieldset.querySelector('#satellites'));
+    const { filled, total } = repeats ? satelliteProgress() : sectionState(fieldset);
+    const done = total > 0 && filled === total;
+
+    const item = el('li', `rail-step${done ? ' done' : ''}${filled ? ' started' : ''}`);
+    const link = el('button', 'rail-link');
+    link.type = 'button';
+    link.append(
+      el('span', 'rail-dot', done ? '\u2713' : String(index + 1)),
+      el('span', 'rail-name', name),
+    );
+    if (total) link.append(el('span', 'rail-count', `${filled}/${total}`));
+    if (repeats) link.querySelector('.rail-count').title = `${filled} of ${total} satellites complete`;
+    link.addEventListener('click', () => {
+      fieldset.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      fieldset.querySelector('input, select')?.focus({ preventScroll: true });
+    });
+    item.append(link);
+
+    // the satellites hang off their own step, because that is the part that
+    // repeats and the part you lose your place in
+    if (fieldset.contains(list) === false && fieldset.querySelector('#satellites')) {
+      const subs = el('ul', 'rail-subs');
+      satellites.forEach((satellite, at) => {
+        const sub = el('li');
+        const button = el('button', `rail-sub${open.has(at) ? ' on' : ''}`);
+        button.type = 'button';
+        button.textContent = satellite.name || `Satellite ${at + 1}`;
+        button.addEventListener('click', () => {
+          open.clear();
+          open.add(at);
+          renderSatellites();
+          list.parentElement && el('div');
+          document.querySelectorAll('.sat-block')[at]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+        sub.append(button);
+        subs.append(sub);
+      });
+      const add = el('li');
+      const addButton = el('button', 'rail-sub add', '+ Add a satellite');
+      addButton.type = 'button';
+      addButton.addEventListener('click', () => document.getElementById('add-satellite').click());
+      add.append(addButton);
+      subs.append(add);
+      item.append(subs);
+    }
+
+    list.append(item);
+  });
+
+  rail.append(list);
+
+  // The running total lives with the progress it belongs to, rather than
+  // floating over the page on a bar that follows you down it.
+  const total = el('p', 'rail-tally');
+  total.id = 'tally';
+  rail.append(total);
+  tally();
+
+  markCurrent();
+}
+
+// The rail reflects the form, so it redraws whenever the form changes.
+form.addEventListener('input', drawRail);
+form.addEventListener('change', drawRail);
+
+// …and follows you down it. Completion tells you what is left; this tells you
+// where you are, which is the half a long form actually loses people on.
+//
+// Not an IntersectionObserver: the Satellites section is four times the height
+// of the others, so it overlaps any sensible trigger band at almost every
+// scroll position and wins permanently. Asking "which section have I scrolled
+// past the top of?" is the question the rail is actually answering, and it is
+// the same answer whatever the sections weigh.
+const LINE = 140;
+
+function markCurrent() {
+  const sections = [...form.querySelectorAll('fieldset')];
+  let at = sections.findLastIndex(section => section.getBoundingClientRect().top <= LINE);
+  // above the first section, nothing is current rather than the last one
+  if (at < 0) at = scrollY > 40 ? 0 : -1;
+  rail.querySelectorAll('.rail-step').forEach((step, index) => {
+    step.classList.toggle('current', index === at);
+  });
+}
+
+// Called straight from the scroll event rather than deferred to an animation
+// frame. A rAF-gated flag looks like the careful version and is the opposite:
+// the callback does not run in a backgrounded tab, so the flag never clears and
+// the rail stops following you for the rest of the session. This reads four
+// rectangles and writes one class — it is cheaper than the bookkeeping.
+addEventListener('scroll', markCurrent, { passive: true });
+addEventListener('resize', markCurrent, { passive: true });
+
+// ── 10. leaving without losing it by accident ──────────────────────────────
+//
+// Nothing is saved in this prototype, so the only protection worth having is
+// the browser's own: if anything has been typed, a stray click on Cancel or the
+// back button asks first.
+let dirty = false;
+form.addEventListener('input', () => { dirty = true; }, { once: true });
+addEventListener('beforeunload', event => {
+  if (!dirty) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+// Submitting is not abandoning, so the guard stands down first.
+form.addEventListener('submit', () => { dirty = false; });
+
+// Mar 2026 → 2026-03, which is what a month input wants.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function monthValue(written) {
+  const match = /^([A-Za-z]{3})\w*\s+(\d{4})$/.exec(String(written ?? '').trim());
+  if (!match) return '';
+  const at = MONTHS.findIndex(name => name.toLowerCase() === match[1].toLowerCase());
+  return at < 0 ? '' : `${match[2]}-${String(at + 1).padStart(2, '0')}`;
+}
+
+// A saved mission, translated back into what the controls hold.
+function load(row) {
+  const set = (key, value) => {
+    const field = form.elements[key];
+    if (!field || !value) return;
+    field.value = value;
+    field.dispatchEvent(new Event(field.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
+  };
+
+  set('name', row.name);
+  set('objective', row.objective);
+  set('budget', String(row.budget ?? '').replace(/[^\d]/g, ''));
+  set('sellerNotes', row.sellerNotes);
+  set('country', valueFor(COUNTRIES, row.country));
+  set('registration', valueFor(COUNTRIES, row.registration));
+  set('exportControl', valueFor(EXPORT_CONTROL, row.exportControl));
+  if (row.exportControlOther) {
+    const detail = document.getElementById('exportControlDetail');
+    if (detail) { detail.value = row.exportControlOther; detail.dispatchEvent(new Event('input', { bubbles: true })); }
+  }
+
+  const ride = form.querySelector(`input[name="ride"][value="${valueFor(RIDE_PREFERENCES, row.ride)}"]`);
+  if (ride) ride.checked = true;
+
+  flexibility = (row.flexibility ?? []).map(label => valueFor(FLEXIBILITY, label)).filter(Boolean);
+  for (const box of document.querySelectorAll('#flexibility input')) {
+    box.checked = flexibility.includes(box.value);
+  }
+
+  satellites = row.satellites.map(satellite => {
+    const [length = '', width = '', height = ''] = String(satellite.dimensions ?? '')
+      .split(/\s*\u00d7\s*/).map(side => side.trim());
+    const deployers = String(satellite.deployer ?? '')
+      .split(',').map(name => valueFor(DEPLOYERS, name)).filter(Boolean);
+    return {
+      name: satellite.name ?? '',
+      form: valueFor(FORM_FACTORS, satellite.form),
+      mass: satellite.mass ?? '',
+      length, width, height,
+      orbit: valueFor(ORBIT_TYPES, satellite.orbit),
+      inclination: satellite.inclination ?? '',
+      altitude: satellite.altitude ?? '',
+      ltan: satellite.ltan === '\u2014' ? '' : (satellite.ltan ?? ''),
+      windowFrom: satellite.windowFrom ?? '',
+      windowTo: satellite.windowTo ?? '',
+      propulsion: valueFor(PROPULSION, satellite.propulsion),
+      propulsionOther: satellite.propulsionOther ?? '',
+      readiness: valueFor(READINESS, satellite.readiness),
+      shipBy: monthValue(satellite.shipBy),
+      deployers,
+      deployerOther: satellite.deployerOther ?? '',
+      suppliesDeployer: Boolean(satellite.deployerMass),
+      deployerMass: satellite.deployerMass ?? '',
+    };
+  });
+
+  open.clear();
+  open.add(0);
+}
+
+if (editing) {
+  // Editing a record is not starting from a document, so that panel steps out
+  // of the way rather than offering to overwrite what is already there.
+  document.querySelector('.assist')?.remove();
+
+  document.title = `Edit ${editing.name} · OrbitMatch`;
+  document.querySelector('.intake-head h1').textContent = `Edit ${editing.name}`;
+  document.querySelector('.intake-head .muted').textContent =
+    'Changing what a mission needs changes what it matches. Published missions are re-matched against every listing when you save.';
+  document.getElementById('publish').textContent = 'Save changes';
+  document.getElementById('draft').hidden = editing.status !== 'Published';
+  document.getElementById('draft').textContent = 'Unpublish to draft';
+  document.querySelector('.intake-cancel').href = `/mission.html?id=${encodeURIComponent(editing.id)}&view=${view}`;
+  document.querySelector('.back-link').href = `/mission.html?id=${encodeURIComponent(editing.id)}&view=${view}`;
+  document.querySelector('.back-link').textContent = `\u2190 ${editing.name}`;
+
+  load(editing);
+}
+
 renderSatellites();
+drawRail();
 
 accountMenu(view);
 themeToggle();

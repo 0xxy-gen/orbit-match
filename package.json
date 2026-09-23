@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "OrbitMatch \u2014 front-end pages for a launch marketplace: sign up, log in and the privacy policy",
+  "description": "OrbitMatch — front-end pages for a launch marketplace: sign up, log in and the privacy policy",
   "scripts": {
-    "start": "python3 -m http.server 3200 --directory public"
+    "start": "python3 serve.py"
   }
 }

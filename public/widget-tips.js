@@ -1,13 +1,12 @@
 // What each dashboard panel is for.
 //
-// The trigger is the panel's header, not the whole panel. A tooltip that fires
-// anywhere over a 400px-tall widget would cover the rows you were reading and
-// re-open every time the pointer crossed it. The header is the part you look at
-// when you are asking "what is this?", and it is out of the way once you know.
+// The trigger is a small ⓘ beside the panel's title — always there, never
+// revealed on hover. An affordance that only appears once you are already
+// pointing at it cannot be discovered by anyone who did not know to look, and
+// on a touch screen it does not appear at all.
 //
-// It also hangs off a small ⓘ button, so it can be reached by keyboard and read
-// by a screen reader — a description that only exists on hover does not exist
-// for everyone.
+// It is a real button, so it can be reached by keyboard and read by a screen
+// reader: a description that exists only on hover does not exist for everyone.
 //
 // The text lives in data-tip on each panel in home.html, beside the panel it
 // describes, so nobody has to keep two lists in step.
@@ -77,8 +76,11 @@ export function widgetTips(scope = document) {
     button.tabIndex = 0;
     title.after(button);
 
-    head.addEventListener('pointerenter', () => show(panel, head));
-    head.addEventListener('pointerleave', () => hide(panel));
+    // The icon is the trigger, not the header. Hovering the header meant the
+    // tip fired while you were reaching for "See all", and it covered the rows
+    // you were on your way to read.
+    button.addEventListener('pointerenter', () => show(panel, button));
+    button.addEventListener('pointerleave', () => hide(panel));
     button.addEventListener('focus', () => show(panel, button));
     button.addEventListener('blur', () => hide(panel));
     // Tapping tells a touch screen, which has no hover, what this is.

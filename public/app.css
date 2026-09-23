@@ -33,7 +33,7 @@
   --press-wash: rgba(255, 255, 255, 0.1);
   --faint: rgba(255, 255, 255, 0.28);
   --faintest: rgba(255, 255, 255, 0.16);
-  --placeholder: rgba(255, 255, 255, 0.5);
+  --placeholder: rgba(255, 255, 255, 0.34);
   --dot: rgba(255, 255, 255, 0.5);
 
   /* what is legible on top of the cyan fill */
@@ -99,7 +99,7 @@
   --press-wash: rgba(11, 14, 18, 0.09);
   --faint: rgba(11, 14, 18, 0.3);
   --faintest: rgba(11, 14, 18, 0.18);
-  --placeholder: rgba(11, 14, 18, 0.42);
+  --placeholder: rgba(11, 14, 18, 0.34);
   --dot: rgba(11, 14, 18, 0.32);
 
   --on-accent: #ffffff;
@@ -408,7 +408,11 @@ select {
   transition: border-color .2s var(--ease), box-shadow .2s var(--ease);
 }
 
+/* A placeholder that reads as a value is worse than no placeholder: people
+   scroll past a field believing they filled it. It sits well below label
+   contrast so the eye sorts empty from filled without reading either. */
 input::placeholder { color: var(--placeholder); }
+select.placeholder { color: var(--placeholder); }
 
 input:hover,
 select:hover { border-bottom-color: var(--field-hover); }
@@ -942,7 +946,19 @@ a.reveal:hover { color: var(--text); }
 .brand--wide .brand-foot { margin-top: clamp(28px, 7vh, 80px); }
 
 /* ─── the page after logging in ───────────────────────────────────────────── */
-body.app-page { padding: 0; }
+/* The footer belongs at the bottom of the page, and on a short page the bottom
+   of the page is the bottom of the window — not wherever the content happened
+   to stop. A column that fills the viewport with the main region taking the
+   slack puts it there without pinning it over anything. */
+body.app-page {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+body.app-page > .app-main { flex: 1 0 auto; }
+body.app-page > .site-foot { flex: none; }
 
 .app-bar {
   position: sticky;
@@ -1191,19 +1207,29 @@ body.app-page { padding: 0; }
 .tl-cell.on { outline: 1px solid var(--cyan); outline-offset: 1px; color: var(--text); }
 
 /* ─── toast ───────────────────────────────────────────────────────────────── */
+/* The toast was a near-black pill with var(--text-2) on it — fine in dark mode,
+   black on black in light mode, which is how it shipped. It is a floating
+   surface like the menus and Cosmo's panel, so it uses the same tokens they do
+   and follows the theme.
+   It is also not a pill any more: these messages name an event and its
+   consequence, which is a sentence, and a 999px radius on two lines of text
+   looks like a mistake. */
 .toast {
   position: fixed;
   left: 50%;
   bottom: 28px;
   transform: translateX(-50%);
-  z-index: 20;
-  padding: 12px 18px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: rgba(14, 14, 14, .96);
+  z-index: 60;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 13px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--float);
   color: var(--text-2);
   font-size: 13.5px;
-  box-shadow: 0 12px 32px -12px var(--shadow);
+  line-height: 1.5;
+  text-align: left;
+  box-shadow: 0 18px 44px -18px var(--shadow);
 }
 
 @media (max-width: 900px) {
@@ -1747,18 +1773,25 @@ body.editing .box-head { gap: 10px; }
 }
 
 /* a slide-over: it takes space only while it is wanted */
+/* Cosmo docks beside the page rather than sliding over it.
+   Below the app bar and inset on three sides, so it reads as a panel the app
+   has made room for — the nav stays whole and reachable, which a full-height
+   overlay pinned to the viewport edge cuts in half. */
+:root { --bar-h: 63px; --ask-gap: 12px; --ask-w: 400px; }
+
 .ask {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  top: calc(var(--bar-h) + var(--ask-gap));
+  right: var(--ask-gap);
+  bottom: var(--ask-gap);
   z-index: 50;
   display: grid;
   grid-template-rows: auto 1fr auto auto;
-  width: min(410px, 100vw);
-  border-left: 1px solid var(--line-strong);
+  width: min(var(--ask-w), calc(100vw - var(--ask-gap) * 2));
+  border: 1px solid var(--line);
+  border-radius: 14px;
   background: var(--float);
-  box-shadow: -30px 0 70px -34px var(--shadow);
+  box-shadow: 0 18px 50px -22px var(--shadow);
   animation: ask-in .22s var(--ease);
 }
 @keyframes ask-in { from { transform: translateX(16px); opacity: 0; } }
@@ -1862,13 +1895,26 @@ body.editing .box-head { gap: 10px; }
 .ask-send:hover:not(:disabled) { background: var(--cyan-hover); }
 .ask-send:disabled { background: var(--raised); color: var(--text-4); cursor: default; }
 
-/* the page shifts rather than hiding behind the panel */
-body.asking .app-main, body.asking .app-bar { padding-right: calc(min(410px, 100vw) + clamp(16px, 2.4vw, 44px)); }
+/* The page gives up the panel's width rather than hiding behind it.
+   The padding goes on the body, not on .app-main: a page with a max-width
+   centres inside its content box, so padding-right there eats the content while
+   the block stays put — the columns crush and the page still runs under the
+   panel. Padding the body narrows the space every child centres within, which
+   is what "the page is narrower now" actually means. */
+body.asking { padding-right: calc(var(--ask-w) + var(--ask-gap) * 2); }
+
+/* …except the bar, which the panel starts below and therefore never reaches.
+   Shrinking it anyway moved the search and the account menu for no reason —
+   the whole point of docking Cosmo under the bar is that the bar stays whole.
+   The negative margin gives back exactly what the body padding took. */
+body.asking > .app-bar { margin-right: calc(-1 * (var(--ask-w) + var(--ask-gap) * 2)); }
 
 .ghost.ask-inline { flex: 0 0 auto; width: auto; padding: 9px 14px; }
 
 @media (max-width: 900px) {
-  body.asking .app-main, body.asking .app-bar { padding-right: clamp(16px, 2.4vw, 44px); }
+  /* the panel covers the page at this width, so there is nothing to make room for */
+  body.asking { padding-right: 0; }
+  body.asking > .app-bar { margin-right: 0; }
   .ask-open kbd { display: none; }
 }
 
@@ -2183,7 +2229,81 @@ body.asking .app-main, body.asking .app-bar { padding-right: calc(min(410px, 100
 /* ─── mission intake ──────────────────────────────────────────────────────── */
 /* The form is the page, so it takes a reading measure rather than the full
    width the lists use. */
-.app-main.intake { max-width: 780px; }
+/* Wide enough for the rail beside the form, not wide enough to tempt the form
+   into two columns. The form column keeps its reading measure — a 1,200px text
+   input puts the label so far from the value that the pair stops reading as
+   one thing. */
+.app-main.intake { max-width: 1120px; }
+
+.intake-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 44px; align-items: start; }
+.intake-col { min-width: 0; max-width: 760px; }
+
+/* where you are in a form four screens long */
+.intake-rail { position: sticky; top: 84px; min-width: 0; }
+.rail-steps { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; counter-reset: none; }
+
+.rail-link {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-3);
+  font: 500 13px var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .15s, color .15s;
+}
+.rail-link:hover { background: var(--wash); color: var(--text); }
+
+.rail-dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--text-4);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.rail-step.started .rail-dot { border-color: var(--field-hover); color: var(--text-2); }
+.rail-step.done .rail-dot { border-color: var(--cyan); background: var(--cyan); color: var(--on-accent); }
+.rail-step.done .rail-name { color: var(--text); }
+
+.rail-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rail-count { color: var(--text-4); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+.rail-subs { display: grid; gap: 1px; margin: 2px 0 6px; padding: 0 0 0 28px; list-style: none; }
+.rail-sub {
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0 6px 6px 0;
+  background: none;
+  color: var(--text-4);
+  font: 400 12.5px var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background-color .15s;
+}
+.rail-sub:hover { color: var(--text-2); background: var(--wash); }
+.rail-sub.on { border-left-color: var(--cyan); color: var(--text); }
+.rail-sub.add { color: var(--text-4); }
+.rail-sub.add:hover { color: var(--cyan-hover); }
+
+@media (max-width: 960px) {
+  .intake-layout { grid-template-columns: 1fr; gap: 20px; }
+  .intake-rail { position: static; }
+  .rail-steps { grid-auto-flow: column; grid-auto-columns: 1fr; overflow-x: auto; }
+  .rail-subs { display: none; }
+  .intake-col { max-width: none; }
+}
 
 .intake-head { margin: 4px 0 26px; }
 .intake-head h1 { margin: 0 0 8px; font-size: clamp(26px, 2.2vw, 32px); font-weight: 600; letter-spacing: -0.03em; }
@@ -2192,7 +2312,7 @@ body.asking .app-main, body.asking .app-bar { padding-right: calc(min(410px, 100
 #mission { display: grid; gap: 22px; }
 
 /* a quiet line under a field, for the thing the label cannot say in two words */
-.hint { margin: 6px 0 0; color: var(--text-4); font-size: 12.5px; line-height: 1.45; }
+.hint { margin: 6px 0 0; color: var(--text-4); font-size: 12px; line-height: 1.5; }
 fieldset > .hint { margin: -6px 0 0; }
 
 .choices.three { grid-template-columns: repeat(3, 1fr); }
@@ -2280,13 +2400,12 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   background: none;
   color: var(--text-4);
   cursor: help;
-  opacity: 0;
+  opacity: .55;
   transition: opacity .15s, color .15s;
 }
-/* stays out of the way until you go looking, but always there for a keyboard */
-.box-head:hover .tip-btn,
-.tip-btn:focus-visible { opacity: 1; }
-.tip-btn:hover { color: var(--text-2); }
+/* always present — an icon that appears on hover cannot be found by someone
+   who did not already know it was there, and never appears at all on touch */
+.tip-btn:hover, .tip-btn:focus-visible { opacity: 1; color: var(--text-2); }
 
 .box-head { gap: 8px; }
 .box-head .quiet-link { margin-left: auto; }
@@ -2338,6 +2457,9 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
    the content rather than pinned: it is there when you reach the bottom and
    never takes a row of working space from the page above it. */
 .app-page .site-foot {
+  /* width is explicit: as a flex item, `margin: 0 auto` cancels the cross-axis
+     stretch and the footer shrinks to fit its own three columns */
+  width: 100%;
   max-width: 1680px;
   height: auto;
   margin: 0 auto;
@@ -2436,21 +2558,22 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 
 /* The actions follow you down: with eight satellites, "save" was four screens
    from wherever you were working. */
+/* Not pinned. It was, on the argument that "save" should be reachable from four
+   screens down — but Publish Mission is a terminal action, and a terminal
+   action that follows you down the page is an invitation to press it before you
+   have finished. The two things pinning bought are better placed anyway: the
+   rail handles getting back, and the tally now sits with the progress it
+   belongs to. The form ends, and its actions are at the end of it. */
 .intake-bar {
-  position: sticky;
-  bottom: 0;
-  z-index: 8;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  margin: 0 -4px;
-  padding: 14px 4px 16px;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 20px;
   border-top: 1px solid var(--hair);
-  background: var(--background);
 }
-.intake-tally { margin: 0; color: var(--text-3); font-size: 13px; font-variant-numeric: tabular-nums; }
-.intake-actions .submit { margin-top: 0; height: 44px; }
+.intake-actions .submit { margin-top: 0; height: 38px; font-size: 14px; }
 
 @media (max-width: 720px) {
   .flex-grid { grid-template-columns: 1fr; }
@@ -2554,12 +2677,20 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .sat-scroll .sat-table { min-width: 1180px; }
 .sat-scroll .sat-table th, .sat-scroll .sat-table td { white-space: nowrap; }
 
-/* the first column stays put, so a row still says which satellite it is */
+/* The first column stays put, so a row still says which satellite it is once
+   you scroll sideways. A pinned cell has to paint its own background or the
+   columns slide under it — and that background has to be whatever is actually
+   behind the table, which differs by page: a card on the Missions list, the
+   bare page on a mission. Hard-coding --surface put a white block on the grey
+   page, so the surface is named once here and each context sets it. */
+.sat-scroll { --table-bg: var(--surface); }
+.mission-panel .sat-scroll { --table-bg: var(--background); }
+
 .sat-scroll .sat-table th:first-child,
 .sat-scroll .sat-table .sat-name {
   position: sticky;
   left: 0;
-  background: var(--surface);
+  background: var(--table-bg);
 }
 
 /* ─── start from a document ───────────────────────────────────────────────── */
@@ -2589,9 +2720,69 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .assist-title { margin: 0; font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
 .assist-sub { margin: 4px 0 0; max-width: 60ch; color: var(--text-3); font-size: 13px; line-height: 1.5; }
 
-.assist-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.assist-tools { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+.assist-pick { display: grid; justify-items: center; gap: 6px; }
 .assist-btn { width: auto; padding: 8px 14px; font-size: 13px; cursor: pointer; }
-.assist-types { color: var(--text-4); font-size: 12px; }
+/* the mark and the words are one label, so they sit on one baseline */
+.assist-btn.cosmo { display: inline-flex; align-items: center; gap: 7px; }
+/* Every button in this panel is the same height, whatever it carries: an icon
+   that is two pixels taller must not make one button taller than its
+   neighbour. */
+.assist-tools .assist-btn,
+.assist-tools .submit.compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  margin: 0;
+  padding: 0 16px;
+  width: auto;
+  font-size: 13.5px;
+}
+.assist-tools .assist-btn svg,
+.assist-tools .submit.compact svg { flex: none; }
+.assist-btn.cosmo svg { color: var(--text); }
+.submit.compact.scan svg { color: var(--on-accent); opacity: .85; }
+
+/* ── the drop zone ───────────────────────────────────────────────────────── */
+.drop-zone {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 26px 20px 24px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  background: none;
+  color: var(--text-3);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color .15s var(--ease), background-color .15s var(--ease);
+}
+.drop-zone:hover { border-color: var(--field-hover); background: var(--wash); }
+.drop-zone.over { border-color: var(--cyan); border-style: solid; background: var(--accent-soft); }
+.drop-zone.over .drop-icon { color: var(--cyan); }
+
+.drop-icon { color: var(--text-4); transition: color .15s; }
+.drop-line { color: var(--text-2); font-size: 13.5px; }
+.drop-link { color: var(--cyan); text-decoration: underline; text-underline-offset: 3px; }
+.drop-types { color: var(--text-4); font-size: 11.5px; }
+
+/* ── what you attached, before it is read ────────────────────────────────── */
+.drop-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--wash);
+}
+.drop-file-icon { display: grid; place-items: center; color: var(--text-3); flex: none; }
+.drop-file-name { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1; }
+.drop-file-name strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 500; }
+.drop-file-size { color: var(--text-4); font-size: 12px; font-variant-numeric: tabular-nums; }
+.assist-types { color: var(--text-4); font-size: 11.5px; }
 
 /* the review: what was found, where it came from, and what gets written */
 .assist-review { display: grid; gap: 12px; padding-top: 4px; border-top: 1px solid var(--hair); }
@@ -2646,4 +2837,889 @@ input[type="month"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 @media (max-width: 720px) {
   .assist-bar { flex-direction: column; align-items: stretch; }
   .assist-actions .submit.compact, .assist-actions .ghost { flex: 1; }
+}
+
+/* ─── the intake, second pass ─────────────────────────────────────────────── */
+
+/* Three groups inside a satellite card. Captions rather than headings: they
+   separate without claiming to be a level of the document outline. */
+.sat-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 -4px;
+  color: var(--text-4);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.sat-group::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
+.sat-block > .sat-group:first-of-type { margin-top: 2px; }
+
+/* A satellite that has a name wears it as written — the tables say Aurora-1,
+   so the card should not say AURORA-1. */
+.sat-block-n.named {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+/* L, W and H caption their boxes instead of trailing them like units */
+.dim { position: static; display: grid; }
+.dim-tag {
+  position: static;
+  margin-bottom: 1px;
+  color: var(--text-4);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+}
+.dim input { padding-right: 0; }
+.dims { align-items: end; }
+.dim-x { padding-top: 0; padding-bottom: 10px; }
+
+/* where you are, not only what is done */
+.rail-step.current .rail-link { background: var(--wash); color: var(--text); }
+.rail-step.current .rail-name { font-weight: 600; }
+.rail-step.current:not(.done) .rail-dot { border-color: var(--cyan); color: var(--cyan); }
+
+.intake-cancel { width: auto; padding: 0 16px; height: 38px; display: inline-grid; place-items: center; font-size: 13.5px; text-decoration: none; }
+
+.assist-reject { margin: 0; color: var(--danger-text); font-size: 12.5px; }
+
+@media (prefers-reduced-motion: reduce) { .assist { transition: none; } }
+
+/* ─── a list inside a dashboard panel ─────────────────────────────────────── */
+/* One line per row. Three columns that stay in their lanes down the list, so
+   the eye reads a column rather than re-parsing every row: what it is, where it
+   is, and what is about to run out. */
+.mini-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.mini-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, auto);
+  align-items: baseline;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--hair);
+}
+.mini-row:last-child { border-bottom: 0; }
+
+.mini-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.mini-name:hover { color: var(--cyan-hover); }
+
+.mini-phase { color: var(--text-3); font-size: 12.5px; white-space: nowrap; }
+
+.mini-clock {
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+/* inside the spec's five business days, a date stops being a date and becomes
+   a task — so it is the one thing on the row allowed to use colour */
+.mini-clock.urgent { color: var(--danger-text); font-weight: 500; }
+.mini-clock.quiet { color: var(--text-4); }
+
+.box-empty { margin: 0; color: var(--text-4); font-size: 13px; }
+
+/* a section inside a panel — quieter than the page title, louder than a label */
+.panel-heading {
+  margin: 6px 0 -4px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* a heading that starts a new region of the page rather than another block
+   inside the current one */
+.panel-heading.band {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.mission-tools { display: flex; align-items: center; gap: 8px; flex: none; }
+.mission-tools .ghost {
+  width: auto;
+  padding: 8px 14px;
+  font-size: 13px;
+  text-decoration: none;
+  display: inline-grid;
+  place-items: center;
+}
+
+/* ─── editing a record in place ───────────────────────────────────────────── */
+/* A control in a cell keeps the table's rhythm: same size, same alignment, a
+   line under it so it reads as writable without turning the row into a form. */
+/* An editable cell keeps the type it had while you were reading it. A select
+   does not inherit the page font, and an input does not inherit its size from a
+   table cell, so both are stated rather than assumed — otherwise edit mode
+   arrives in three different faces at four different sizes. */
+.cell-input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px solid var(--field-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: normal;
+  font-variant-numeric: tabular-nums;
+}
+.cell-input:hover { border-bottom-color: var(--field-hover); }
+.cell-input:focus { outline: none; border-bottom-color: var(--cyan); }
+select.cell-input { padding-right: 16px; background-position: right 0 center; }
+
+.cell-window { display: flex; gap: 6px; }
+.cell-window .cell-input { width: 7.5em; }
+
+.sat-table td:has(.cell-input) { padding-top: 6px; padding-bottom: 6px; }
+/* the pinned name column has to hold an input once the row is editable */
+.sat-table td.sat-name { min-width: 8.5rem; }
+.sat-actions, .sat-actions-head { text-align: right; white-space: nowrap; }
+.sat-actions .sat-tool + .sat-tool { margin-left: 12px; }
+.add-sat { width: auto; margin-top: 12px; padding: 8px 14px; font-size: 13px; }
+
+/* a fact reads at 13.5px, so it is edited at 13.5px */
+.mission-facts dd .cell-input { max-width: 15rem; font-size: 13.5px; height: 32px; padding-left: 0; }
+.mission-facts dd .money { align-items: center; }
+.mission-facts dd .money-unit { font-size: 13.5px; }
+.fact-flex { display: grid; gap: 6px; margin-top: 2px; }
+
+/* The title and the objective, editable at exactly the size they are read.
+   Written as input.title-input, not .title-input: the global
+   input[type="text"] rule scores 0,1,1 and would otherwise drop both of these
+   back to 16px — a heading that shrinks when you click it. */
+.editing-record .mission-titles { flex: 1; min-width: 0; }
+
+input.title-input {
+  width: 100%;
+  max-width: 28ch;
+  height: auto;
+  padding: 0 0 2px;
+  border: 0;
+  border-bottom: 1px solid var(--field-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: clamp(22px, 2vw, 26px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+input.sub-input {
+  width: 100%;
+  height: auto;
+  margin-top: 8px;
+  padding: 0 0 3px;
+  border: 0;
+  border-bottom: 1px solid var(--field-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+input.title-input:focus,
+input.sub-input:focus { outline: none; border-bottom-color: var(--cyan); box-shadow: none; }
+
+/* the multi-part cells */
+.cell-sides { display: flex; align-items: center; gap: 4px; }
+/* its own class rather than .tight, whose `width: auto` let a number input
+   fall back to its default twenty-ish characters and sprawl across the row */
+.cell-input.side { width: 4.4rem; flex: none; }
+.cell-x { color: var(--text-4); font-size: 11px; }
+.cell-stack { display: grid; gap: 4px; }
+.cell-ticks { display: grid; gap: 4px; }
+.tick.small { gap: 7px; font-size: 12px; }
+.tick.small input { width: 14px; height: 14px; }
+.tick.small span { line-height: 1.3; }
+
+.mission-tools .submit.compact { width: auto; margin: 0; padding: 0 16px; height: 36px; }
+.mission-tools .ghost:disabled { cursor: not-allowed; }
+
+/* ─── edit mode on a record ───────────────────────────────────────────────── */
+.editing-record .mission-panel {
+  padding: 18px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.editing-record .mission-panel .sat-scroll { --table-bg: var(--surface); }
+
+/* a dropdown should look like one */
+select.cell-input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 18px;
+  background-image: var(--arrow);
+  background-repeat: no-repeat;
+  background-position: right 1px center;
+}
+.cell-input.tight { width: auto; min-width: 4.2rem; }
+.cell-window { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+
+/* out-of-range says so where it happened */
+.cell-input[aria-invalid] { border-bottom-color: var(--danger); color: var(--danger-text); }
+
+/* every column wide enough to show its own value */
+.sat-table [data-col="name"] { min-width: 9rem; }
+.sat-table [data-col="form"] { min-width: 7.5rem; }
+.sat-table [data-col="mass"] { min-width: 6rem; }
+.sat-table [data-col="dimensions"] { min-width: 15rem; }
+.sat-table [data-col="orbit"] { min-width: 8rem; }
+.sat-table [data-col="inclination"] { min-width: 7.5rem; }
+.sat-table [data-col="altitude"] { min-width: 7rem; }
+.sat-table [data-col="ltan"] { min-width: 5.5rem; }
+.sat-table [data-col="window"] { min-width: 13rem; }
+.sat-table [data-col="propulsion"] { min-width: 12rem; }
+.sat-table [data-col="readiness"] { min-width: 10rem; }
+.sat-table [data-col="shipBy"] { min-width: 8rem; }
+.sat-table [data-col="deployer"] { min-width: 13rem; }
+.sat-table [data-col="deployerMass"] { min-width: 8rem; }
+
+/* the row's own actions stay reachable without scrolling fourteen columns */
+.sat-actions, .sat-actions-head {
+  position: sticky;
+  right: 0;
+  background: var(--table-bg);
+  border-left: 1px solid var(--hair);
+  padding-left: 12px;
+}
+
+/* a grid stretches its children, so width alone does not shrink this — it has
+   to be told where to sit */
+.add-sat { width: auto; justify-self: start; }
+.ghost.danger { border-color: var(--danger); color: var(--danger-text); }
+.ghost.danger:hover { background: rgba(192, 54, 44, .08); border-color: var(--danger); }
+.mission-tools .submit.compact:disabled { opacity: .5; cursor: not-allowed; }
+
+/* satellites as cards while editing — the table's job is reading */
+.sat-editor { display: grid; gap: 12px; }
+.sat-editor .sat-block { gap: 14px; }
+.sat-editor .field { gap: 2px; }
+.sat-editor .field-label { margin-bottom: 0; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+.sat-editor .cell-input { height: 34px; font-size: 13.5px; }
+.sat-editor .cell-input.side { width: 5rem; }
+.sat-editor .cell-ticks { grid-template-columns: repeat(2, minmax(0, 1fr)); display: grid; gap: 6px 14px; }
+.sat-editor .cell-window { gap: 6px 10px; }
+.sat-editor .row { gap: 18px; }
+
+/* while editing, the chip steps out of the title's way */
+.editing-record .mission-name-row { align-items: center; gap: 14px; }
+.editing-record .mission-head.detail { align-items: flex-start; gap: 24px; }
+
+/* what saving will actually do, said beside the button that does it */
+.save-note { margin: 8px 0 0; max-width: 58ch; color: var(--text-4); font-size: 12px; line-height: 1.5; }
+.save-note.loud { color: var(--danger-text); }
+
+/* deployers, grouped by the question they answer */
+.deployer-group {
+  grid-column: 1 / -1;
+  margin: 10px 0 2px;
+  color: var(--text-4);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.deployer-group:first-child { margin-top: 2px; }
+.deployers { display: block; }
+.deployer-set { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 16px; }
+/* Eleven options one per row is eleven rows of mostly empty space. The card is
+   full width here, so they sit in columns like they do on the intake form and
+   the group headings span all of them. */
+.sat-editor .cell-ticks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 18px;
+  align-items: start;
+}
+.sat-editor .cell-ticks .deployer-group { grid-column: 1 / -1; margin: 10px 0 0; }
+.sat-editor .cell-ticks .deployer-group:first-child { margin-top: 0; }
+.sat-editor .cell-ticks .cell-input { grid-column: 1 / -1; max-width: 26rem; }
+
+@media (max-width: 900px) {
+  .sat-editor .cell-ticks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) { .deployer-set { grid-template-columns: 1fr; } }
+
+/* the product, and the size that decides whether it fits */
+.tick-text { display: grid; gap: 1px; min-width: 0; }
+.tick-size { color: var(--text-4); font-size: 11px; font-variant-numeric: tabular-nums; }
+.tick:has(.tick-text) { align-items: start; }
+.tick:has(.tick-text) input { margin-top: 2px; }
+
+/* Who supplies the deployer is its own question, not a fourteenth compatibility
+   tick — so it sits below a rule with its own label. */
+.supply-field { margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--hair); }
+.supply-choices { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 6px; }
+.supply-cell .supply-choices { gap: 6px 16px; margin-top: 0; }
+.supply-cell .cell-input { margin-top: 8px; max-width: 8rem; }
+
+/* the deployer question: modes first, then whichever control they call for */
+.deployers { margin-top: 12px; }
+.deployer-group:first-child { margin-top: 0; }
+.cell-stack .supply-choices { margin-bottom: 6px; }
+.cell-stack .deployer-group { margin-top: 8px; }
+
+/* what you have built so far, under the sections it was built in */
+.rail-tally {
+  margin: 14px 10px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--hair);
+  color: var(--text-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Notes: a field that is prose, so it gets room to be prose */
+textarea {
+  width: 100%;
+  min-height: 76px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--field-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  resize: vertical;
+  outline: none;
+  transition: border-color .2s var(--ease);
+}
+textarea:hover { border-bottom-color: var(--field-hover); }
+textarea:focus { border-bottom-color: var(--cyan); }
+textarea::placeholder { color: var(--placeholder); }
+
+.mission-facts .fact-wide { grid-column: 1 / -1; margin-top: 6px; }
+.mission-facts .fact-wide dd { max-width: 80ch; white-space: pre-wrap; line-height: 1.55; }
+.mission-facts .fact-wide .notes-input { max-width: 60rem; min-height: 68px; font-size: 13.5px; }
+
+/* ─── the mission log ─────────────────────────────────────────────────────── */
+.log-composer {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.log-composer-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+/* one line of UI text opposite a button, not a paragraph: a reading measure
+   here just wrapped it into a narrow column with the rest of the row empty */
+.log-composer-foot .hint { margin: 0; max-width: none; }
+.log-composer-foot .submit.compact { width: auto; margin: 0; height: 36px; padding: 0 22px; }
+
+textarea.log-input {
+  min-height: 56px;
+  padding: 2px 0 8px;
+  font-size: 14px;
+}
+
+.log-list { display: grid; gap: 0; margin: 4px 0 0; padding: 0; list-style: none; }
+.log-entry { padding: 14px 0; border-bottom: 1px solid var(--hair); }
+.log-entry:last-child { border-bottom: 0; }
+
+.log-head { display: flex; align-items: baseline; gap: 10px; }
+.log-who { color: var(--text); font-size: 13px; font-weight: 600; }
+.log-when { color: var(--text-4); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* an edit that leaves no mark turns a log into a draft */
+.log-edited { color: var(--text-4); font-size: 11px; font-style: italic; }
+.log-edit {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-4);
+  font: 500 12px var(--font-sans);
+  cursor: pointer;
+}
+.log-edit:hover { color: var(--text); }
+
+.log-text { margin: 4px 0 0; max-width: 78ch; color: var(--text-2); font-size: 13.5px; line-height: 1.55; }
+.log-tools { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.log-tools .submit.compact { width: auto; margin: 0; height: 34px; padding: 0 14px; }
+.log-tools .ghost { width: auto; height: 34px; padding: 0 14px; font-size: 13px; }
+
+/* the product's own record, set apart from anybody's words */
+.log-entry.system .log-who { color: var(--text-3); font-weight: 500; }
+.log-event {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--accent-tint);
+  color: var(--cyan);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+}
+
+/* the composer and whatever follows it are separate surfaces, so they do not
+   touch */
+.log { display: grid; gap: 14px; }
+.mission-panel .log { margin-top: -2px; }
+
+/* Full width, like everything else on the page. A reading measure is right for
+   a paragraph someone sits down to read; this is a working note glanced at
+   beside a table, and capping it just leaves a column of white space where the
+   record used to be. */
+.mission-notes {
+  margin: 0;
+  width: 100%;
+  color: var(--text-2);
+  font-size: 13.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.mission-panel > .notes-input { max-width: none; width: 100%; min-height: 76px; }
+
+/* a line under a section heading, for what the heading cannot say on its own */
+.panel-note { margin: -6px 0 0; color: var(--text-4); font-size: 12px; line-height: 1.5; }
+
+/* The tabs already draw a rule. The facts draw their own because on the
+   missions list they sit under a mission header inside a card and need
+   separating — but on a mission page they are the first thing after the tabs,
+   so the two rules stack 22px apart and read as a mistake. */
+.mission-panel > .mission-facts:first-child { border-top: 0; padding-top: 0; }
+
+/* the one note field a seller reads, marked so it can never be mistaken for
+   the one they do not */
+.shared-badge {
+  margin-left: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .06em;
+}
+
+/* ─── launch configurations ───────────────────────────────────────────────── */
+/* the explanation and the one action you can start with, on one line */
+.config-intro { display: flex; align-items: start; justify-content: space-between; gap: 24px; }
+/* one short line of chrome, not prose: a reading measure only wrapped it
+   into a narrow column with the rest of the row empty */
+.config-intro .panel-note { margin: 0; max-width: none; }
+/* .ghost is width:100% by default, which flex:none would otherwise keep */
+.group-own { flex: none; width: auto; padding: 9px 14px; white-space: nowrap; }
+.config {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  background: var(--wash);
+}
+
+/* title on the left, the one verb on the right */
+.config-head { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.config-head .ghost.small { flex: none; }
+.add-config { border-color: var(--accent-ring); color: var(--cyan); }
+
+.config-name { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.config-title { color: var(--text); font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
+.config-from { color: var(--text-4); font-size: 11.5px; }
+.config-meta { margin: 2px 0 0; color: var(--text-4); font-size: 12px; }
+
+/* one flat grid so a launch cell can span the satellites on it */
+.config-table {
+  display: grid;
+  /* launch · satellite · orbit type · inclination · altitude · LTAN ·
+     window · ready to ship · mass · envelope
+     Proportional rather than a mix of fixed and fluid: fixed columns took
+     their width off the top and the leftovers all landed in the two fluid
+     ones, which bunched the three narrow numbers together and left holes on
+     either side. Shares keep the rhythm even at any width. */
+  grid-template-columns:
+    minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 0.7fr) minmax(0, 0.95fr)
+    minmax(0, 0.9fr) minmax(0, 0.6fr) minmax(0, 1.4fr) minmax(0, 0.95fr)
+    minmax(0, 0.7fr) minmax(0, 1.35fr);
+  align-items: baseline;
+  gap: 0 12px;
+  font-size: 12.5px;
+}
+.config-th {
+  padding-bottom: 4px;
+  color: var(--text-4);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.config-td, .config-group { padding: 8px 0; border-top: 1px solid var(--hair); }
+
+
+/* the merged cell: the grouping drawn rather than repeated on every row */
+.config-group {
+  grid-row: span var(--span, 1);
+  display: grid;
+  align-content: start;
+  gap: 2px;
+}
+.config-group-name { color: var(--text); font-weight: 600; }
+.config-group-mass { color: var(--text-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+.config-sat { color: var(--text); font-weight: 500; }
+.config-orbit, .config-window, .config-ship, .config-ltan { color: var(--text-3); }
+.config-inc, .config-alt { color: var(--text-3); }
+.config-mass, .config-dims { color: var(--text-2); }
+.config-td.num { font-variant-numeric: tabular-nums; }
+.config-dims { white-space: nowrap; }
+.config-group.clash + .config-td ~ .config-td.config-window,
+.config-group.clash .config-group-name { color: var(--danger-text); }
+
+
+/* ranked by preference: first is favourite */
+.config-rank { display: grid; gap: 18px; }
+.config-rank > .config { position: relative; padding-left: 62px; }
+.config-rank > .config.lifted { opacity: .45; }
+.config-rank > .config.over { box-shadow: 0 -2px 0 0 var(--cyan); }
+.config-rank > .config.under { box-shadow: 0 2px 0 0 var(--cyan); }
+
+.rank-head { display: grid; gap: 2px; }
+.rank-head .panel-note { margin: 0; }
+
+.config-rank-tools {
+  position: absolute;
+  top: 15px;
+  left: 14px;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  cursor: grab;
+}
+.config-rank-tools:active { cursor: grabbing; }
+.config-grip { display: block; color: var(--text-4); }
+.config-rank > .config:hover .config-grip { color: var(--text-3); }
+.config-rank-n {
+  padding-bottom: 1px;
+  color: var(--text-2);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.config-rank-btn {
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.config-rank-btn:hover:not(:disabled) { border-color: var(--line); background: var(--hover-wash); color: var(--text); }
+.config-rank-btn:disabled { opacity: .28; cursor: default; }
+
+/* your own line about a shape you have chosen */
+.config-note {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 4px 0 0;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.config-note .log-edit { flex: none; }
+.config-note-edit { display: grid; gap: 8px; padding-top: 4px; }
+
+/* set aside: still readable, visibly not in the running */
+.config.dismissed { opacity: .58; }
+.config.dismissed:hover, .config.dismissed:focus-within { opacity: 1; }
+.cosmo-dismissed {
+  justify-self: start;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--text-4);
+  font: 500 12px var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.cosmo-dismissed:hover { color: var(--text-2); }
+
+/* saying yes to the change a conditional shape asks for */
+.config-apply { display: grid; gap: 8px; padding-top: 4px; }
+.config-apply-note { margin: 0; max-width: 80ch; color: var(--text-3); font-size: 12.5px; line-height: 1.5; }
+.config-apply-tools { display: flex; gap: 8px; }
+.config-apply-tools .ghost.small { width: auto; }
+
+/* a shape that only works once something moves, marked where the eye lands */
+.config-chip {
+  padding: 2px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--text-3);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.config-acts { display: flex; align-items: center; gap: 8px; flex: none; }
+
+/* a quantity beside a tab's name, not part of it */
+.tab-count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 7px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+  vertical-align: 1px;
+}
+.mission-tab.on .tab-count { background: var(--accent-soft); color: var(--cyan); }
+/* beside a small-caps section heading the bubble has to shed the tracking */
+.panel-heading .tab-count { margin-left: 8px; letter-spacing: 0; text-transform: none; vertical-align: 0; }
+
+/* building one by hand */
+.config-editor { border-color: var(--accent-ring); }
+.grouper { display: grid; gap: 12px; }
+
+/* everything waits here until it is placed on a launch */
+.grouper-tray {
+  padding: 10px 14px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  background: var(--wash);
+}
+.grouper-tray.done { opacity: .72; }
+.grouper-tray.taking, .grouper-bin.taking { border-color: var(--cyan); border-style: solid; }
+.grouper-empty { color: var(--text-4); font-size: 12.5px; }
+
+/* a launch is a box you can see, so adding one is visibly something */
+.grouper-bin {
+  padding: 10px 14px 12px;
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.grouper-bin.clash { border-color: var(--danger); }
+.grouper-bin-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 8px; }
+.grouper-drop {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-4);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.grouper-drop:hover { background: var(--hover-wash); color: var(--text); }
+.grouper-bin-name {
+  color: var(--text-3);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.grouper-bin-facts { color: var(--text-4); font-size: 12px; }
+.grouper-bin.clash .grouper-bin-facts { color: var(--danger-text); }
+
+/* what is on this launch, as objects rather than lines of text */
+.grouper-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.grouper-sat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 6px 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: grab;
+}
+.grouper-tray .grouper-sat { padding-right: 12px; }
+.grouper-sat:active { cursor: grabbing; }
+.grouper-sat.lifted { opacity: .4; }
+.grouper-off {
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-4);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.grouper-off:hover { background: var(--hover-wash); color: var(--text); }
+
+/* the same chip, dashed, because it is the empty slot at the end of the row */
+select.grouper-add {
+  width: auto;
+  padding: 5px 26px 5px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  background-image: var(--arrow);
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 11px;
+  color: var(--text-3);
+  font: 500 12.5px var(--font-sans);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+select.grouper-add:hover { border-color: var(--field-hover); color: var(--text); }
+.grouper .ghost.small { justify-self: start; width: auto; }
+.grouper .config-warn { margin: 6px 0 0; }
+/* units live up here so the cells below can be bare numbers */
+
+/* a batch whose members share no quarter cannot fly, however well the mass adds */
+.config-warn {
+  margin: 2px 0 0;
+  color: var(--danger-text);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* a requirement, not a fault: this grouping works once the stated thing moves */
+.config-needs {
+  margin: 2px 0 0;
+  color: var(--text-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* Cosmo's suggestions, fenced off from the groupings you made yourself. The
+   star says who once, at the top, so no card has to repeat it. */
+.cosmo-box {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--accent-ring);
+  border-radius: 14px;
+  background: var(--accent-soft);
+}
+/* Nested and lighter read as nearer the front, which put Cosmo's proposals
+   above the shapes actually committed to. Its cards recede instead. */
+.cosmo-box .config { background: transparent; border-color: var(--line); }
+.cosmo-box .empty { margin: 0; }
+.cosmo-box-head { display: flex; align-items: center; gap: 7px; }
+.cosmo-box-star { display: inline-flex; color: var(--cyan); }
+.cosmo-box-title, .cosmo-box-sub {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.cosmo-box-sub { margin-top: 6px; }
+.cosmo-box-note { margin: -6px 0 0; color: var(--text-4); font-size: 12.5px; line-height: 1.55; }
+
+
+@media (max-width: 900px) {
+  /* A heading row cannot survive a wrapping grid, and a merged cell cannot
+     span rows that are no longer in one. Below this width the table unpicks
+     itself into one block per satellite, each cell carrying its own label. */
+  .config-th { display: none; }
+  .config-table { grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  .config-group { grid-row: auto; grid-column: 1 / -1; grid-auto-flow: column; justify-content: start; gap: 10px; }
+  .config-td { display: grid; gap: 1px; }
+  .config-td::before {
+    content: attr(data-label);
+    color: var(--text-4);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .config-sat { grid-column: 1 / -1; }
+  .config-dims { white-space: normal; }
+  .config-warn, .config-needs { margin-left: 0; }
+
+  .config-intro { flex-direction: column; align-items: stretch; gap: 12px; }
+  .group-own { width: 100%; }
+}
+
+/* ─── tagging a colleague ─────────────────────────────────────────────────── */
+.mention {
+  color: var(--cyan);
+  font-weight: 500;
+  cursor: default;
+}
+
+.mention-menu {
+  position: absolute;
+  z-index: 60;
+  overflow: hidden;
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--float);
+  box-shadow: var(--shadow);
+}
+.mention-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: 500 13px var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.mention-item.on, .mention-item:hover { background: var(--hover-wash); }
+.mention-name { color: var(--text); }
+.mention-role { color: var(--text-4); font-size: 11.5px; font-weight: 400; }
+
+/* your own entry in the log, marked without losing whose it is */
+.log-mine {
+  padding: 1px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--text-4);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
 }

@@ -148,6 +148,7 @@ export function validateMission(input, satellites = []) {
 
   satellites.forEach((satellite, index) => {
     if (!text(satellite.name)) fields[`sat-${index}-name`] = 'Name the satellite.';
+    if (!text(satellite.form)) fields[`sat-${index}-form`] = 'Choose a form factor, or Not a CubeSat.';
     range('mass', index, satellite.mass, 0.1, 20000, 'Enter a mass in kg.');
     for (const side of ['length', 'width', 'height']) {
       range(side, index, satellite[side], 1, 10000, 'Enter a size in mm.');
@@ -194,8 +195,13 @@ export function validateMission(input, satellites = []) {
     else if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(text(satellite.shipBy))) {
       fields[`sat-${index}-shipBy`] = 'Use a month, like 2026-07.';
     }
-    if (!satellite.deployers?.length) fields[`sat-${index}-deployers`] = 'Pick at least one deployer.';
-    else if (satellite.deployers.includes('custom') && !text(satellite.deployerOther)) {
+    // The deployer question has three answers and only one of them is a list,
+    // so only one of them is checked against the list.
+    const mode = satellite.deployerMode ?? 'list';
+    if (mode === 'list' && !satellite.deployers?.length) {
+      fields[`sat-${index}-deployers`] = 'Pick at least one deployer.';
+    }
+    if (mode === 'custom' && !text(satellite.deployerOther)) {
       fields[`sat-${index}-deployerOther`] = 'Describe the interface.';
     }
     if (satellite.suppliesDeployer) {

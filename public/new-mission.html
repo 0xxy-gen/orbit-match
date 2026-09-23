@@ -84,9 +84,13 @@
         <p class="muted">What you enter here is what gets matched against published launch capacity. The satellite numbers do the matching, so they are the part worth getting right.</p>
       </header>
 
+      <div class="intake-layout">
+        <nav class="intake-rail" id="rail" aria-label="Form sections"></nav>
+
+        <div class="intake-col">
       <form id="mission" novalidate>
         <fieldset>
-          <legend><span class="step">1</span>The mission</legend>
+          <legend>The mission</legend>
 
           <div class="field">
             <label for="name">Mission name</label>
@@ -96,7 +100,8 @@
 
           <div class="field">
             <label for="objective">Objective</label>
-            <input id="objective" name="objective" type="text" maxlength="300" placeholder="Sub-metre optical imaging of Arctic shipping lanes" aria-describedby="objective-error">
+            <input id="objective" name="objective" type="text" maxlength="300" aria-describedby="objective-hint objective-error">
+            <p class="hint" id="objective-hint">What the mission is for, in one line — e.g. sub-metre optical imaging of Arctic shipping lanes.</p>
             <p class="error" id="objective-error" aria-live="polite"></p>
           </div>
 
@@ -112,7 +117,7 @@
         </fieldset>
 
         <fieldset>
-          <legend><span class="step">2</span>Compliance</legend>
+          <legend>Compliance</legend>
 
           <div class="row">
             <div class="field">
@@ -143,7 +148,7 @@
         </fieldset>
 
         <fieldset>
-          <legend><span class="step">3</span>Ride &amp; flexibility</legend>
+          <legend>Ride &amp; flexibility</legend>
           <div class="field">
             <span class="field-label" id="ride-label">How do you want to fly?</span>
             <div class="choices three" id="ride" role="radiogroup" aria-labelledby="ride-label" aria-describedby="ride-error"></div>
@@ -158,7 +163,7 @@
         </fieldset>
 
         <fieldset>
-          <legend><span class="step">4</span>Satellites</legend>
+          <legend>Satellites</legend>
           <p class="hint" id="satellites-hint">One block per spacecraft. Identical satellites in a constellation can be duplicated rather than retyped.</p>
           <div id="satellites"></div>
           <p class="error" id="satellites-error" aria-live="polite"></p>
@@ -167,15 +172,26 @@
           </div>
         </fieldset>
 
+        <fieldset>
+          <legend>Anything else</legend>
+          <div class="field">
+            <label for="sellerNotes">Notes to sellers <span class="shared-badge">Shared</span></label>
+            <textarea id="sellerNotes" name="sellerNotes" rows="3" maxlength="2000" aria-describedby="sellerNotes-hint"></textarea>
+            <p class="hint" id="sellerNotes-hint">Anything a seller needs that the fields above do not cover. Sent with every request and readable by any seller you are matched with.</p>
+          </div>
+        </fieldset>
+
         <div class="intake-bar">
-          <p class="intake-tally" id="tally"></p>
           <div class="intake-actions">
+            <a class="ghost intake-cancel" href="/missions.html">Cancel</a>
             <button class="submit secondary" type="submit" id="draft" value="Draft">Save as Draft</button>
             <button class="submit" type="submit" id="publish" value="Published">Publish Mission</button>
           </div>
         </div>
         <p class="prototype-note">Prototype — nothing is saved and no listing sees this.</p>
       </form>
+        </div>
+      </div>
     </div>
   </main>
 

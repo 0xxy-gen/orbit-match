@@ -2,7 +2,7 @@
 //
 // Summoned (nav button, ⌘K) rather than always open: a chat box sitting there
 // with nothing in it implies the product does not know what you need. The
-// useful work is contextual — openAssistant('Why doesn’t Aster-2 fit?') from a
+// useful work is contextual — openAssistant('Why doesn’t Spectrum F3 fit?') from a
 // listing, a quote, a deal.
 //
 // Named Cosmo, roled "Mission assistant" rather than "Mission manager": mission
@@ -39,7 +39,7 @@ const SUGGESTIONS = {
   ],
   sell: [
     'What changed since I was last here?',
-    'Which satellites fit Aster-2 and why?',
+    'Which satellites fit Spectrum F3 and why?',
     'Summarise this quote against the last version',
     'What happens if I decline a request?',
   ],
@@ -56,7 +56,7 @@ let opener;
 //
 // The star is the glyph: it works at 13px in the nav button and beside every
 // message, and it is the shorthand people now read as "AI".
-const STAR = size => `
+export const STAR = size => `
     <svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">
       <path d="M10.6 2.2c.62 5.9 2.9 8.3 8.4 9.3-5.5 1-7.78 3.4-8.4 9.3-.62-5.9-2.9-8.3-8.4-9.3 5.5-1 7.78-3.4 8.4-9.3Z" fill="currentColor"/>
       <path d="M19.4 14.2c.22 2.05.98 2.88 2.9 3.2-1.92.32-2.68 1.15-2.9 3.2-.22-2.05-.98-2.88-2.9-3.2 1.92-.32 2.68-1.15 2.9-3.2Z" fill="currentColor" opacity=".62"/>
@@ -67,7 +67,7 @@ const STAR = size => `
 // shrunk, printed, or put on a dark background, which a detailed drawing does
 // not. Laika is the most famous passenger in launch history, so a space dog is
 // the right kind of joke: warm, and about this industry.
-const PORTRAIT = `
+export const PORTRAIT = `
     <svg viewBox="0 0 48 48" width="38" height="38" aria-hidden="true">
       <g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
         <!-- the dome is cut off where it meets the base, not a circle resting on it -->
