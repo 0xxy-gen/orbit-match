@@ -9,7 +9,7 @@
 // stands, and it is one track per launch, never one per mission: a mission of
 // three satellites can be on two launches at different points, and a single
 // track would have to lie about one of them.
-import { MISSION_ROWS, PHASES, DEAL } from './demo-data.js';
+import { MISSION_ROWS, PHASES, DEAL, LISTINGS } from './demo-data.js';
 import { stepsFor, stepWindow } from './procurement-path.js';
 import { COUNTRIES, EXPORT_CONTROL, RIDE_PREFERENCES, FLEXIBILITY, quarterRank } from './mission-options.js';
 import { satelliteTable, satelliteEditor } from './satellite-table.js';
@@ -493,13 +493,54 @@ function overview() {
 // So a launch card carries both: the manifest — what is on it and what it
 // weighs, which is the launch configuration — and the phase it has reached with
 // whatever clock is running against it.
+// Whether this listing could carry this satellite, and if not, why not.
+//
+// Said out loud rather than left to the reader to work out from two tables.
+// "Cannot take Aurora-T" is worth nothing on its own; "its window is after this
+// launch" tells you which lever to pull.
+function fitFor(listing, satellite) {
+  if (!listing) return { ok: true };
+
+  const from = satellite.windowFrom;
+  const to = satellite.windowTo;
+  if (from && quarterRank(listing.window) < quarterRank(from)) {
+    return { ok: false, why: `flies before its window opens in ${from}` };
+  }
+  if (to && quarterRank(listing.window) > quarterRank(to)) {
+    return { ok: false, why: `flies after its window closes in ${to}` };
+  }
+
+  const altitude = Number(satellite.altitude);
+  if (altitude && listing.alt && Math.abs(listing.alt - altitude) > 60) {
+    return { ok: false, why: `${listing.alt} km is too far from its ${altitude} km` };
+  }
+  const inclination = Number(satellite.inclination);
+  if (inclination && listing.inc && Math.abs(listing.inc - inclination) > 2) {
+    return { ok: false, why: `${listing.inc}° does not reach its ${inclination}°` };
+  }
+  const mass = Number(satellite.mass) || 0;
+  if (listing.massPerPort && mass > listing.massPerPort) {
+    return { ok: false, why: `${mass} kg is over the ${listing.massPerPort} kg per port` };
+  }
+  return { ok: true };
+}
+
+function factLine(pairs) {
+  const wrap = el('dl', 'offer-facts');
+  for (const [label, value] of pairs) {
+    if (!value) continue;
+    wrap.append(el('dt', null, label), el('dd', null, value));
+  }
+  return wrap;
+}
+
 function launchCard(launch) {
   const on = row.satellites.filter(satellite => satellite.launch === launch.id);
-  const mass = on.reduce((sum, satellite) => sum + (Number(satellite.mass) || 0)
-    + (Number(satellite.deployerMass) || 0), 0);
+  const listing = LISTINGS.find(each => each.launcher === launch.listing);
 
   const group = el('section', 'launch-group');
 
+  // ── who, and what the flight is ──────────────────────────────────────────
   const head = el('div', 'launch-head');
   const titles = el('div');
   const name = el('div', 'launch-name');
@@ -508,72 +549,101 @@ function launchCard(launch) {
     el('span', 'launch-seller', launch.seller),
     el('span', `chip status ${launch.status.replace(/\s+/g, '-')}`, launch.status),
   );
-  // Which of your configurations this launch is filling.
-  //
-  // A launch in procurement is not free-floating: it exists because a seller
-  // answered one of the shapes you stated. Saying which one is what makes the
-  // Launch Configurations tab mean something once deals start — otherwise the
-  // shapes are a thing you declared and never heard about again.
-  const from = (row.configurations ?? []).find(option =>
+
+  // Which of your configurations this launch is filling. A launch in
+  // procurement is not free-floating: it exists because a seller answered one
+  // of the shapes you stated.
+  // All of them, not the first: Aurora-T alone is a batch in both A and B, and
+  // naming only A would hide that this launch serves either.
+  const serves = (row.configurations ?? []).filter(option =>
     option.added && option.batches.some(names =>
       on.length && on.every(satellite => names.includes(satellite.name))));
-  if (from) {
+  if (serves.length) {
     const tag = el('a', 'launch-config');
     tag.href = `/mission.html?id=${row.id}&view=${view}&tab=configuration`;
-    tag.textContent = `Configuration ${from.letter}`;
+    tag.textContent = `Configuration ${serves.map(option => option.letter).join(' or ')}`;
     name.append(tag);
   }
 
-  titles.append(name, el('p', 'launch-meta', [
-    launch.window,
-    `${on.length} satellite${on.length === 1 ? '' : 's'}`,
-    mass ? `${Number(mass.toFixed(1))} kg to orbit` : null,
-  ].filter(Boolean).join(' \u00b7 ')));
-
+  titles.append(name);
+  if (listing) {
+    titles.append(el('p', 'launch-meta', [
+      `${listing.sellerType} · ${listing.nation}`,
+      listing.site,
+      `${listing.orbit} ${listing.altitude} · ${listing.inclination}${listing.ltan && listing.ltan !== '—' ? ` · LTAN ${listing.ltan}` : ''}`,
+      listing.window,
+    ].join(' \u00b7 ')));
+  }
   head.append(titles);
   group.append(head);
 
-  // what is on the launch — the configuration half
-  if (on.length) {
-    const manifest = el('table', 'manifest');
-    const body = el('tbody');
-    for (const satellite of on) {
-      const line = el('tr');
-      line.append(
-        el('td', 'manifest-name', satellite.name),
-        el('td', null, satellite.mass ? `${satellite.mass} kg` : '—'),
-        el('td', null, satellite.dimensions ?? '—'),
-        el('td', 'manifest-fit', satellite.deployerMass
-          ? `${satellite.deployer} · +${satellite.deployerMass} kg dispenser`
-          : (satellite.deployer ?? '—')),
-      );
-      body.append(line);
-    }
-    manifest.append(body);
-    group.append(manifest);
+  // ── what it can take ─────────────────────────────────────────────────────
+  //
+  // The question the tab exists to answer. It was a manifest of what is
+  // already on the launch, which says nothing about the satellites that are
+  // not — and those are the ones you have a decision to make about.
+  const takes = el('div', 'offer-block');
+  takes.append(el('h4', 'offer-heading', 'What it can take'));
+
+  const list = el('ul', 'offer-sats');
+  for (const satellite of row.satellites) {
+    const booked = satellite.launch === launch.id;
+    const fit = fitFor(listing, satellite);
+    const line = el('li', `offer-sat${booked ? ' on' : fit.ok ? ' could' : ' no'}`);
+    line.append(el('span', 'offer-sat-name', satellite.name));
+    line.append(el('span', 'offer-sat-say', booked
+      ? `on this launch · ${satellite.mass} kg`
+      : fit.ok ? `could ride · ${satellite.mass} kg`
+      : `cannot ride — ${fit.why}`));
+    list.append(line);
+  }
+  takes.append(list);
+
+  if (listing) {
+    takes.append(factLine([
+      ['Ports', `${listing.ports}, up to ${listing.massPerPort} kg each`],
+      ['Spare capacity', `${listing.spareMass} kg`],
+      ['Deployers', listing.deployers.join(', ')],
+    ]));
+  }
+  group.append(takes);
+
+  // ── terms ────────────────────────────────────────────────────────────────
+  if (listing) {
+    const terms = el('div', 'offer-block');
+    terms.append(el('h4', 'offer-heading', 'Terms'));
+    terms.append(factLine([
+      ['Offer', `${listing.offer}${listing.confirmed ? ' · flight confirmed' : ' · flight tentative'}`],
+      ['Price', listing.price],
+      ['Respond by', listing.respondBy],
+      ['Payload delivery', `${listing.delivery} (${listing.lMinus})`],
+      ['Integration', listing.integration.join(' or ')],
+      ['Rebooking', listing.rebooking],
+      ['In the price', listing.included.join(', ')],
+      ['Add-ons', listing.addOns.join(', ')],
+    ]));
+    group.append(terms);
   }
 
-  // where it has got to — the procurement half
-  group.append(launchTrack(launch));
-  if (launch.detail) group.append(el('p', 'launch-detail', launch.detail));
+  // ── where it stands ──────────────────────────────────────────────────────
+  const where = el('div', 'offer-block');
+  where.append(el('h4', 'offer-heading', 'Where it stands'));
+  where.append(launchTrack(launch));
+  if (launch.detail) where.append(el('p', 'launch-detail', launch.detail));
 
-  // The road, here rather than behind an "Open deal" link.
-  //
-  // A page inside a page for one list is a navigation people have to learn. It
-  // shows the step just done, the one running, and the one next — which is what
-  // you want while scanning several launches — with the rest folded into a
-  // count at either end for when this is the launch you came for.
-  //
-  // Only the deal the fixture actually describes carries dates and round
-  // counts. Another launch gets the same path with nothing invented on it.
+  // The road, here rather than behind an "Open deal" link. It shows the step
+  // just done, the one running, and the one next, with the rest folded into a
+  // count at either end.
   const marks = launch.listing === DEAL.listing ? DEAL.marks : {};
   const seen = openPath.get(launch.id) ?? {};
-  group.append(stepWindow(stepsFor(launch.reached, marks), {
+  where.append(stepWindow(stepsFor(launch.reached, marks), {
     earlier: seen.earlier,
     later: seen.later,
     onEarlier: () => { openPath.set(launch.id, { ...seen, earlier: true }); render(); },
     onLater: () => { openPath.set(launch.id, { ...seen, later: true }); render(); },
   }));
+  group.append(where);
+
   return group;
 }
 
