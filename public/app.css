@@ -3830,6 +3830,7 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
   text-transform: uppercase;
 }
 
+.offer-fills { margin: -2px 0 12px; color: var(--text-2); font-size: 12.5px; }
 .offer-sats { display: grid; gap: 2px; margin: 0 0 12px; padding: 0; list-style: none; }
 .offer-sat {
   display: grid;

@@ -553,15 +553,26 @@ function launchCard(launch) {
   // Which of your configurations this launch is filling. A launch in
   // procurement is not free-floating: it exists because a seller answered one
   // of the shapes you stated.
-  // All of them, not the first: Aurora-T alone is a batch in both A and B, and
-  // naming only A would hide that this launch serves either.
-  const serves = (row.configurations ?? []).filter(option =>
-    option.added && option.batches.some(names =>
-      on.length && on.every(satellite => names.includes(satellite.name))));
-  if (serves.length) {
+  // Which launch of which configuration this offer fills.
+  //
+  // Not just "Configuration A": A is two launches and this deal is one of them,
+  // so the configuration alone does not say which slot has been answered. And
+  // all of them, not the first — Aurora-T alone is Launch 2 of A and Launch 3
+  // of B, so a single offer can fill a slot in either.
+  //
+  // Exact, not a subset. A launch carrying one satellite out of a batch of two
+  // has not filled that batch, and saying it had would hide the gap.
+  const riding = new Set(on.map(satellite => satellite.name));
+  const fills = (row.configurations ?? [])
+    .filter(option => option.added)
+    .flatMap(option => option.batches
+      .map((names, at) => ({ option, at, names }))
+      .filter(({ names }) => names.length === riding.size && names.every(who => riding.has(who))));
+
+  for (const { option, at } of fills) {
     const tag = el('a', 'launch-config');
     tag.href = `/mission.html?id=${row.id}&view=${view}&tab=configuration`;
-    tag.textContent = `Configuration ${serves.map(option => option.letter).join(' or ')}`;
+    tag.textContent = `Configuration ${option.letter} · Launch ${at + 1}`;
     name.append(tag);
   }
 
@@ -584,6 +595,11 @@ function launchCard(launch) {
   // not — and those are the ones you have a decision to make about.
   const takes = el('div', 'offer-block');
   takes.append(el('h4', 'offer-heading', 'What it can take'));
+  if (fills.length) {
+    takes.append(el('p', 'offer-fills',
+      `Fills ${fills.map(({ option, at, names }) =>
+        `Launch ${at + 1} of Configuration ${option.letter}`).join(' and ')} — ${[...riding].join(' and ')}.`));
+  }
 
   const list = el('ul', 'offer-sats');
   for (const satellite of row.satellites) {
