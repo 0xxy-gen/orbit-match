@@ -317,7 +317,10 @@ export const MISSION_ROWS = {
           ],
         },
         {
-          id: 'c3', from: 'Cosmo',
+          // Added as well, and second in preference: two accepted shapes is the
+          // state that shows ranking, and a mission that would take either is
+          // the ordinary case rather than a corner one.
+          id: 'c3', from: 'Cosmo', added: true, letter: 'B',
           batches: [['Aurora-1'], ['Aurora-2'], ['Aurora-T']],
         },
       ],
