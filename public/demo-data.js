@@ -582,27 +582,56 @@ export const DEAL = {
   waiting: { side: 'you', what: 'Quote v2 awaiting your decision', clock: '9 days of validity left' },
   summary: ['Matched', 'NDA', 'Procurement', 'Contract', 'Booked'],
   reached: 2,
-  steps: [
-    { label: 'Mission published', event: 'SatelliteReady', actor: 'You', state: 'done', at: '12 Mar 2026' },
-    { label: 'Mission matched', event: 'MatchFound', actor: 'Matcher', state: 'done', at: '14 Mar 2026', detail: '3 listings matched Aurora-1' },
-    { label: 'Sign mutual NDA', event: 'NdaExecuted', actor: 'Both', state: 'done', at: '2 Apr 2026', detail: 'Signed by both, channel opened' },
-    { label: 'Draft RFI', actor: 'You', state: 'done', at: '5 Apr 2026', note: 'Your draft — the seller saw nothing until it was sent' },
-    { label: 'Send RFI', event: 'RfiSubmitted', actor: 'You', state: 'done', at: '6 Apr 2026' },
-    { label: 'ROM received', event: 'RomSubmitted', actor: 'Isar Aerospace', state: 'done', at: '13 Apr 2026', detail: 'v1 · ballpark, not binding' },
-    { label: 'Approve, reject or negotiate the ROM', event: 'RomAccepted', actor: 'You', state: 'done', at: '16 Apr 2026', rounds: 'settled in 1 round' },
-    { label: 'Draft RFQ', actor: 'You', state: 'done', at: '20 Apr 2026', note: 'Your draft — includes the compliance matrix' },
-    { label: 'Send RFQ', event: 'RfqSubmitted', actor: 'You', state: 'done', at: '21 Apr 2026', detail: 'With ComplianceMatrixAttached' },
-    { label: 'Quote received', event: 'QuoteSubmitted', actor: 'Isar Aerospace', state: 'done', at: '8 May 2026', detail: 'v2 · supersedes v1' },
-    {
-      label: 'Approve, reject or negotiate the quote', event: 'TermProposed / TermAccepted', actor: 'You',
-      state: 'current', rounds: 'round 2 · 2 compliance rows contested',
+  // Where this deal has got to along the path, keyed by step. The path itself
+  // is PROCUREMENT_PATH below: every launch walks the same seventeen steps, and
+  // only the progress differs, so the two are stored apart. Keeping a full copy
+  // of the steps per deal meant a label could be edited in one place and not
+  // the other.
+  marks: {
+    'Mission published': { at: '12 Mar 2026' },
+    'Mission matched': { at: '14 Mar 2026', detail: '3 listings matched Aurora-1' },
+    'Sign mutual NDA': { at: '2 Apr 2026', detail: 'Signed by both, channel opened' },
+    'Draft RFI': { at: '5 Apr 2026' },
+    'Send RFI': { at: '6 Apr 2026' },
+    'ROM received': { at: '13 Apr 2026', detail: 'v1 · ballpark, not binding' },
+    'Approve, reject or negotiate the ROM': { at: '16 Apr 2026', rounds: 'settled in 1 round' },
+    'Draft RFQ': { at: '20 Apr 2026' },
+    'Send RFQ': { at: '21 Apr 2026', detail: 'With ComplianceMatrixAttached' },
+    'Quote received': { at: '8 May 2026', detail: 'v2 · supersedes v1' },
+    'Approve, reject or negotiate the quote': {
+      rounds: 'round 2 · 2 compliance rows contested',
       detail: 'Quote v2 valid for 9 more days',
     },
-    { label: 'Request the LSA and SOW', actor: 'You', state: 'next' },
-    { label: 'LSA and SOW received', event: 'AgreementDrafted', actor: 'Isar Aerospace', state: 'next' },
-    { label: 'Approve, reject or negotiate the agreement', event: 'TermProposed / TermAccepted', actor: 'Both', state: 'next' },
-    { label: 'LSA and SOW signature', event: 'AgreementSigned ×2 → AgreementExecuted', actor: 'Both', state: 'next' },
-    { label: 'Billing', actor: '—', state: 'untracked', note: 'No events for this in v1 of the flow — it needs a model before it can be tracked' },
-    { label: 'Launch booked', event: 'SatelliteBooked', actor: 'Platform', state: 'next', detail: 'Exclusivity begins here' },
-  ],
+    'Launch booked': { detail: 'Exclusivity begins here' },
+  },
 };
+
+// The whole procurement road, the same for every launch.
+//
+// Seventeen steps because someone about to commit millions should be able to
+// see the entire path, not a progress bar. A step with no event is your own
+// work and says so, since the other side cannot see it and should not appear
+// to be waiting on it.
+export const PROCUREMENT_PATH = [
+  { label: 'Mission published', event: 'SatelliteReady', actor: 'You' },
+  { label: 'Mission matched', event: 'MatchFound', actor: 'System' },
+  { label: 'Sign mutual NDA', event: 'NdaExecuted', actor: 'Both' },
+  { label: 'Draft RFI', actor: 'You', note: 'Your draft — the seller sees nothing until it is sent' },
+  { label: 'Send RFI', event: 'RfiSubmitted', actor: 'You' },
+  { label: 'ROM received', event: 'RomSubmitted', actor: 'Seller' },
+  { label: 'Approve, reject or negotiate the ROM', event: 'RomAccepted', actor: 'You' },
+  { label: 'Draft RFQ', actor: 'You', note: 'Your draft — includes the compliance matrix' },
+  { label: 'Send RFQ', event: 'RfqSubmitted', actor: 'You' },
+  { label: 'Quote received', event: 'QuoteSubmitted', actor: 'Seller' },
+  { label: 'Approve, reject or negotiate the quote', event: 'TermProposed / TermAccepted', actor: 'You' },
+  { label: 'Request the LSA and SOW', actor: 'You' },
+  { label: 'LSA and SOW received', event: 'AgreementDrafted', actor: 'Seller' },
+  { label: 'Approve, reject or negotiate the agreement', event: 'TermProposed / TermAccepted', actor: 'Both' },
+  { label: 'LSA and SOW signature', event: 'AgreementSigned ×2 → AgreementExecuted', actor: 'Both' },
+  { label: 'Billing', actor: '—', untracked: true, note: 'No events for this in v1 of the flow — it needs a model before it can be tracked' },
+  { label: 'Launch booked', event: 'SatelliteBooked', actor: 'System' },
+];
+
+// Which step each of the five summary phases lands on, so a launch that only
+// records "reached: 2" can still say where it is on the long path.
+export const PHASE_STEP = [1, 2, 10, 14, 16];

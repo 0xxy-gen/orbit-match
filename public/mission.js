@@ -9,7 +9,8 @@
 // stands, and it is one track per launch, never one per mission: a mission of
 // three satellites can be on two launches at different points, and a single
 // track would have to lie about one of them.
-import { MISSION_ROWS, PHASES } from './demo-data.js';
+import { MISSION_ROWS, PHASES, DEAL } from './demo-data.js';
+import { stepsFor, stepWindow } from './procurement-path.js';
 import { COUNTRIES, EXPORT_CONTROL, RIDE_PREFERENCES, FLEXIBILITY, quarterRank } from './mission-options.js';
 import { satelliteTable, satelliteEditor } from './satellite-table.js';
 import { assistant, toggleAssistant, STAR } from './assistant.js';
@@ -507,15 +508,29 @@ function launchCard(launch) {
     el('span', 'launch-seller', launch.seller),
     el('span', `chip status ${launch.status.replace(/\s+/g, '-')}`, launch.status),
   );
+  // Which of your configurations this launch is filling.
+  //
+  // A launch in procurement is not free-floating: it exists because a seller
+  // answered one of the shapes you stated. Saying which one is what makes the
+  // Launch Configurations tab mean something once deals start — otherwise the
+  // shapes are a thing you declared and never heard about again.
+  const from = (row.configurations ?? []).find(option =>
+    option.added && option.batches.some(names =>
+      on.length && on.every(satellite => names.includes(satellite.name))));
+  if (from) {
+    const tag = el('a', 'launch-config');
+    tag.href = `/mission.html?id=${row.id}&view=${view}&tab=configuration`;
+    tag.textContent = `Configuration ${from.letter}`;
+    name.append(tag);
+  }
+
   titles.append(name, el('p', 'launch-meta', [
     launch.window,
     `${on.length} satellite${on.length === 1 ? '' : 's'}`,
     mass ? `${Number(mass.toFixed(1))} kg to orbit` : null,
   ].filter(Boolean).join(' \u00b7 ')));
 
-  const open = el('a', 'ghost', 'Open deal →');
-  open.href = `/deal.html?view=${view}`;
-  head.append(titles, open);
+  head.append(titles);
   group.append(head);
 
   // what is on the launch — the configuration half
@@ -541,6 +556,24 @@ function launchCard(launch) {
   // where it has got to — the procurement half
   group.append(launchTrack(launch));
   if (launch.detail) group.append(el('p', 'launch-detail', launch.detail));
+
+  // The road, here rather than behind an "Open deal" link.
+  //
+  // A page inside a page for one list is a navigation people have to learn. It
+  // shows the step just done, the one running, and the one next — which is what
+  // you want while scanning several launches — with the rest folded into a
+  // count at either end for when this is the launch you came for.
+  //
+  // Only the deal the fixture actually describes carries dates and round
+  // counts. Another launch gets the same path with nothing invented on it.
+  const marks = launch.listing === DEAL.listing ? DEAL.marks : {};
+  const seen = openPath.get(launch.id) ?? {};
+  group.append(stepWindow(stepsFor(launch.reached, marks), {
+    earlier: seen.earlier,
+    later: seen.later,
+    onEarlier: () => { openPath.set(launch.id, { ...seen, earlier: true }); render(); },
+    onLater: () => { openPath.set(launch.id, { ...seen, later: true }); render(); },
+  }));
   return group;
 }
 
@@ -604,6 +637,7 @@ let applying = null;   // the conditional suggestion whose change is armed, if a
 let showDismissed = false;
 let noting = null;     // the configuration whose note is open for editing, if any
 let dragging = null;   // index of the configuration being dragged, if any
+const openPath = new Map();  // launch id → which ends of its path are unfolded
 
 function entryRow(entry, index) {
   const item = el('li', `log-entry${entry.event ? ' system' : ''}`);

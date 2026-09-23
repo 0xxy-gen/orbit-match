@@ -3372,18 +3372,21 @@ textarea.log-input {
     minmax(0, 0.9fr) minmax(0, 0.6fr) minmax(0, 1.4fr) minmax(0, 0.95fr)
     minmax(0, 0.7fr) minmax(0, 1.35fr);
   align-items: baseline;
-  gap: 0 12px;
+  /* No column gap: each cell draws its own top border, and a gap has no cell
+     to draw in, so the rule came out segmented between columns. The spacing
+     lives inside the cells instead, where the border follows it. */
+  gap: 0;
   font-size: 12.5px;
 }
 .config-th {
-  padding-bottom: 4px;
+  padding: 0 14px 4px 0;
   color: var(--text-4);
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
 }
-.config-td, .config-group { padding: 8px 0; border-top: 1px solid var(--hair); }
+.config-td, .config-group { padding: 8px 14px 8px 0; border-top: 1px solid var(--hair); }
 
 
 /* the merged cell: the grouping drawn rather than repeated on every row */
@@ -3405,6 +3408,33 @@ textarea.log-input {
 .config-group.clash + .config-td ~ .config-td.config-window,
 .config-group.clash .config-group-name { color: var(--danger-text); }
 
+
+/* the folded ends of a windowed path */
+.step-more { margin: 0; padding: 2px 0 2px 34px; list-style: none; }
+.step-more button {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--text-4);
+  font: 500 12px var(--font-sans);
+  cursor: pointer;
+}
+.step-more button:hover { color: var(--text-2); }
+.step-more button::before { content: "⋯  "; }
+
+.launch-group .step-list { margin: 14px 0 0; padding-top: 14px; border-top: 1px solid var(--hair); }
+
+/* the configuration a launch in procurement is filling */
+.launch-config {
+  padding: 2px 8px;
+  border: 1px solid var(--accent-ring);
+  border-radius: 999px;
+  color: var(--cyan);
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.launch-config:hover { background: var(--accent-soft); }
 
 /* what leaving this empty means, said out loud */
 .config-notice {
@@ -3759,3 +3789,30 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
   font-weight: 600;
   letter-spacing: .04em;
 }
+
+/* ─── tasks ───────────────────────────────────────────────────────────────── */
+/* .box carries no padding of its own — every child brings its own, matching
+   .box-head's 22px so the left edges line up down the panel. */
+.task-panel-note { margin: 16px 22px 4px; max-width: 80ch; color: var(--text-4); font-size: 12.5px; line-height: 1.55; }
+.task-panel-empty { margin: 0 22px 22px; }
+.task-list { display: grid; padding-bottom: 6px; }
+.task {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 13px 22px;
+  border-top: 1px solid var(--hair);
+  color: inherit;
+  text-decoration: none;
+}
+.task:first-child { border-top: 0; }
+.task:hover { background: var(--hover-wash); }
+.task-said { display: grid; gap: 2px; min-width: 0; }
+.task-what { color: var(--text); font-size: 13.5px; font-weight: 500; }
+.task-where { color: var(--text-4); font-size: 12px; }
+.task-clock { flex: none; color: var(--text-3); font-size: 12.5px; }
+/* five days is the line the dashboard already draws */
+.task-clock.urgent { color: var(--danger-text); font-weight: 500; }
+
+.app-main[data-view] .box + .box { margin-top: 20px; }

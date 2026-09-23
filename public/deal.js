@@ -11,6 +11,7 @@
 // pretending to be a milestone. Billing has no events in v1 of the flow, so it
 // says so instead of sitting there for ever incomplete.
 import { DEAL } from './demo-data.js';
+import { stepsFor, stepList } from './procurement-path.js';
 import { assistant, toggleAssistant, openAssistant } from './assistant.js';
 import { accountMenu } from './account-menu.js';
 import { themeToggle } from './theme.js';
@@ -42,33 +43,6 @@ function summaryTrack(deal) {
     wrap.append(step);
   });
   return wrap;
-}
-
-function stepRow(step, index) {
-  const row = el('li', `step-row ${step.state}`);
-
-  const marker = el('span', 'step-marker');
-  marker.append(el('span', 'step-dot', step.state === 'done' ? '✓' : String(index + 1)));
-  row.append(marker);
-
-  const body = el('div', 'step-body');
-  const head = el('div', 'step-head');
-  head.append(el('span', 'step-label', step.label));
-  if (step.at) head.append(el('span', 'step-at', step.at));
-  body.append(head);
-
-  const meta = el('div', 'step-meta');
-  if (step.event) meta.append(el('code', null, step.event));
-  else if (step.state !== 'untracked') meta.append(el('span', 'step-private', 'your draft · not shared'));
-  if (step.actor && step.actor !== '—') meta.append(el('span', 'step-actor', step.actor));
-  if (step.rounds) meta.append(el('span', 'step-rounds', step.rounds));
-  if (meta.childElementCount) body.append(meta);
-
-  if (step.detail) body.append(el('p', 'step-detail', step.detail));
-  if (step.note) body.append(el('p', 'step-note', step.note));
-
-  row.append(body);
-  return row;
 }
 
 function render() {
@@ -116,9 +90,7 @@ function render() {
 
   const list = el('section', 'steps');
   list.append(el('h2', 'steps-title', 'The whole path'));
-  const ol = el('ol', 'step-list');
-  deal.steps.forEach((step, index) => ol.append(stepRow(step, index)));
-  list.append(ol);
+  list.append(stepList(stepsFor(deal.reached, deal.marks)));
   canvas.append(list);
 
   document.getElementById('dash-link').href = `/home.html?view=${view}`;

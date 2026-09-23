@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Deal · OrbitMatch</title>
+  <title>Tasks · OrbitMatch</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="/app.css">
   <script>try{var t=localStorage.getItem('orbitmatch:theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');}catch(e){}</script>
-  <script type="module" src="/deal.js"></script>
+  <script type="module" src="/tasks.js"></script>
 </head>
 <body class="app-page">
   <header class="app-bar">
@@ -28,8 +28,8 @@
 
       <nav class="tabs" aria-label="Sections">
         <a href="/home.html" id="dash-link">Dashboard</a>
-        <a href="/missions.html" id="missions-link" aria-current="page">Missions</a>
-        <a href="/tasks.html" id="tasks-link">Tasks</a>
+        <a href="/missions.html" id="missions-link">Missions</a>
+        <a href="/tasks.html" id="tasks-link" aria-current="page">Tasks</a>
         <a href="/browse.html" id="browse-link">Browse</a>
       </nav>
     </div>
@@ -76,7 +76,7 @@
     </div>
   </header>
 
-  <!-- Blank, like the dashboard was: build the missions view here. -->
+  <!-- Built by tasks.js. -->
   <main class="app-main" id="canvas" data-view="buy"></main>
 
   <footer class="site-foot">
@@ -86,5 +86,7 @@
       <a href="/privacy.html">Privacy Policy</a>
     </div>
   </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>
