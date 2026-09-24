@@ -3817,50 +3817,6 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
 
 .app-main[data-view] .box + .box { margin-top: 20px; }
 
-/* ─── procurement: what is on offer ───────────────────────────────────────── */
-/* Three bands per launch: who and what the flight is, what it can take, and
-   where the deal stands. The middle one is the reason the tab exists. */
-.offer-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--hair); }
-.offer-heading {
-  margin: 0 0 10px;
-  color: var(--text-4);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-
-.offer-fills { margin: -2px 0 12px; color: var(--text-2); font-size: 12.5px; }
-.offer-sats { display: grid; gap: 2px; margin: 0 0 12px; padding: 0; list-style: none; }
-.offer-sat {
-  display: grid;
-  grid-template-columns: 9rem minmax(0, 1fr);
-  gap: 12px;
-  padding: 5px 0;
-  font-size: 12.5px;
-}
-.offer-sat-name { color: var(--text); font-weight: 500; }
-.offer-sat-say { color: var(--text-3); }
-/* already on the launch, could be, or cannot — three states, three weights */
-.offer-sat.on .offer-sat-say { color: var(--cyan); }
-.offer-sat.no .offer-sat-name, .offer-sat.no .offer-sat-say { color: var(--text-4); }
-
-.offer-facts {
-  display: grid;
-  grid-template-columns: 9rem minmax(0, 1fr);
-  gap: 6px 12px;
-  margin: 0;
-  font-size: 12.5px;
-}
-.offer-facts dt { color: var(--text-4); }
-.offer-facts dd { margin: 0; color: var(--text-2); }
-
-@media (max-width: 760px) {
-  .offer-sat, .offer-facts { grid-template-columns: 1fr; gap: 1px; }
-  .offer-facts { gap: 2px; }
-  .offer-facts dd { margin-bottom: 6px; }
-}
-
 /* ─── procurement: one row per offer ──────────────────────────────────────── */
 /* Comparing offers is the job, so they sit on adjacent lines rather than in
    cards a thousand pixels tall. The columns are what you weigh against each
@@ -3896,42 +3852,51 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
 .offer-state .chip { margin-bottom: 2px; }
 
 /* what opens under a row */
-.offer-detail > td { padding: 4px 0 22px; border-top: 0; }
+.offer-detail > td { padding: 0 0 22px; border-top: 0; }
 .offer-panels {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 22px 32px;
-  padding: 16px 18px;
+  gap: 18px;
+  padding: 18px 20px 20px;
   border-radius: 10px;
   background: var(--wash);
 }
-.offer-panel.wide { grid-column: 1 / -1; }
-.offer-heading {
-  margin: 0 0 10px;
+
+/* Label over value, in as many columns as the width allows. Label beside value
+   in a half-width column made both sides too narrow to hold a phrase, so each
+   wrapped while the other half of the page sat empty. */
+.offer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 16px 28px;
+}
+.offer-cell { display: grid; align-content: start; gap: 3px; min-width: 0; }
+.offer-cell.wide { grid-column: span 2; }
+.offer-label {
   color: var(--text-4);
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
 }
-.offer-fills { margin: -2px 0 10px; color: var(--text-2); }
+.offer-value { color: var(--text-2); font-size: 12.5px; line-height: 1.5; }
 
-.offer-sats { display: grid; gap: 3px; margin: 0 0 12px; padding: 0; list-style: none; }
-.offer-sat { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 10px; }
-.offer-sat-name { color: var(--text); font-weight: 500; }
-.offer-sat-say { color: var(--text-3); }
-.offer-sat.on .offer-sat-say { color: var(--cyan); }
-.offer-sat.no .offer-sat-name, .offer-sat.no .offer-sat-say { color: var(--text-4); }
+/* who rides and who does not, above the terms and ruled off from them */
+.offer-fit { padding-bottom: 18px; border-bottom: 1px solid var(--hair); }
+.offer-fit .offer-cell:first-child .offer-value { color: var(--text); font-weight: 500; }
 
-.offer-facts { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 5px 12px; margin: 0; }
-.offer-facts dt { color: var(--text-4); }
-.offer-facts dd { margin: 0; color: var(--text-2); }
-
-.offer-panel .track { margin: 0 0 18px; }
-.offer-panel .step-list { margin: 0; }
+.offer-where { padding-top: 14px; border-top: 1px solid var(--hair); }
+.offer-heading {
+  margin: 0 0 14px;
+  color: var(--text-4);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.offer-where .track { margin: 0 0 18px; }
+.offer-where .step-list { margin: 0; }
 
 @media (max-width: 760px) {
-  .offer-sat, .offer-facts { grid-template-columns: 1fr; gap: 1px; }
-  .offer-facts dd { margin-bottom: 6px; }
+  .offer-cell.wide { grid-column: span 1; }
   .offer-panels { padding: 14px; }
 }

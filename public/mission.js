@@ -525,15 +525,6 @@ function fitFor(listing, satellite) {
   return { ok: true };
 }
 
-function offerFacts(pairs) {
-  const wrap = el('dl', 'offer-facts');
-  for (const [label, value] of pairs) {
-    if (!value) continue;
-    wrap.append(el('dt', null, label), el('dd', null, value));
-  }
-  return wrap;
-}
-
 // Which launch of which configuration an offer fills.
 //
 // Not just "Configuration A": A is two launches and a deal answers one of them.
@@ -609,59 +600,68 @@ function offerRow(launch) {
   return { line, open, on, listing, fills };
 }
 
-function offerDetail(launch, { on, listing, fills }) {
+// A label over its value, in a grid that uses the width it has.
+//
+// Label beside value in a half-width column made both sides too narrow, so
+// "Payload delivery" and "14 Nov 2026 (L−8 weeks)" each wrapped while the right
+// half of the page sat empty. Stacked, nothing wraps and the whole row scans.
+function offerFacts(pairs, className = '') {
+  const grid = el('div', `offer-grid ${className}`.trim());
+  for (const [label, value, wide] of pairs) {
+    if (!value) continue;
+    const cell = el('div', `offer-cell${wide ? ' wide' : ''}`);
+    cell.append(el('span', 'offer-label', label), el('span', 'offer-value', value));
+    grid.append(cell);
+  }
+  return grid;
+}
+
+function offerDetail(launch, { on, listing }) {
   const line = el('tr', 'offer-detail');
   const cell = el('td');
   cell.colSpan = OFFER_COLUMNS.length;
 
-  const grid = el('div', 'offer-panels');
+  const panel = el('div', 'offer-panels');
 
-  // what it can take, including what it cannot and why
-  const takes = el('section', 'offer-panel');
-  takes.append(el('h4', 'offer-heading', 'What it can take'));
-  if (fills.length) {
-    takes.append(el('p', 'offer-fills',
-      `Fills ${fills.map(({ option, at }) => `Launch ${at + 1} of Configuration ${option.letter}`).join(' and ')}.`));
-  }
-  const sats = el('ul', 'offer-sats');
+  // Who it takes, and who it does not.
+  //
+  // Grouped by reason rather than one line per satellite: Aurora-1 and Aurora-2
+  // were refused for the identical cause and said so twice. The reason is the
+  // useful part, so it is said once with everyone it applies to.
+  const cannot = new Map();
   for (const satellite of row.satellites) {
-    const booked = satellite.launch === launch.id;
+    if (satellite.launch === launch.id) continue;
     const fit = fitFor(listing, satellite);
-    const item = el('li', `offer-sat${booked ? ' on' : fit.ok ? ' could' : ' no'}`);
-    item.append(
-      el('span', 'offer-sat-name', satellite.name),
-      el('span', 'offer-sat-say', booked ? `on this launch · ${satellite.mass} kg`
-        : fit.ok ? `could ride · ${satellite.mass} kg`
-        : `cannot ride — ${fit.why}`),
-    );
-    sats.append(item);
+    if (fit.ok) continue;
+    cannot.set(fit.why, [...(cannot.get(fit.why) ?? []), satellite.name]);
   }
-  takes.append(sats);
+  const could = row.satellites.filter(satellite =>
+    satellite.launch !== launch.id && fitFor(listing, satellite).ok);
+
+  panel.append(offerFacts([
+    ['Carries', on.length
+      ? `${on.map(s => s.name).join(', ')} · ${on.reduce((sum, s) => sum + (Number(s.mass) || 0), 0)} kg`
+      : 'Nothing yet', true],
+    ...(could.length ? [['Could also take', could.map(s => s.name).join(', '), true]] : []),
+    ...[...cannot].map(([why, names]) => [`Cannot take ${sentenceList(names)}`, why, true]),
+  ], 'offer-fit'));
+
   if (listing) {
-    takes.append(offerFacts([
+    panel.append(offerFacts([
       ['Ports', `${listing.ports} × up to ${listing.massPerPort} kg`],
       ['Spare capacity', `${listing.spareMass} kg`],
-      ['Deployers', listing.deployers.join(', ')],
-    ]));
-  }
-  grid.append(takes);
-
-  if (listing) {
-    const terms = el('section', 'offer-panel');
-    terms.append(el('h4', 'offer-heading', 'Terms and services'));
-    terms.append(offerFacts([
-      ['Offer', `${listing.offer} · flight ${listing.confirmed ? 'confirmed' : 'tentative'}`],
       ['Launch site', listing.site],
       ['Integration', listing.integration.join(' or ')],
+      ['Offer', `${listing.offer} · flight ${listing.confirmed ? 'confirmed' : 'tentative'}`],
       ['Payload delivery', `${listing.delivery} (${listing.lMinus})`],
       ['Rebooking', listing.rebooking],
-      ['In the price', listing.included.join(', ')],
-      ['Add-ons', listing.addOns.join(', ')],
+      ['Deployers', listing.deployers.join(', '), true],
+      ['In the price', listing.included.join(', '), true],
+      ['Add-ons', listing.addOns.join(', '), true],
     ]));
-    grid.append(terms);
   }
 
-  const where = el('section', 'offer-panel wide');
+  const where = el('section', 'offer-where');
   where.append(el('h4', 'offer-heading', 'Where it stands'));
   where.append(launchTrack(launch));
   const marks = launch.listing === DEAL.listing ? DEAL.marks : {};
@@ -672,9 +672,9 @@ function offerDetail(launch, { on, listing, fills }) {
     onEarlier: () => { openPath.set(launch.id, { ...seen, earlier: true }); render(); },
     onLater: () => { openPath.set(launch.id, { ...seen, later: true }); render(); },
   }));
-  grid.append(where);
+  panel.append(where);
 
-  cell.append(grid);
+  cell.append(panel);
   line.append(cell);
   return line;
 }
