@@ -3837,80 +3837,35 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
   border-top: 1px solid var(--hair);
   vertical-align: top;
 }
-.offer-row { cursor: pointer; }
-.offer-row:hover > td { background: var(--hover-wash); }
-.offer-row:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: -2px; }
-.offer-row.open > td { border-bottom: 0; }
 
 /* the primary value, and the thing that qualifies it, on two lines */
 .offer-top { display: block; color: var(--text); }
 .offer-under { display: block; margin-top: 2px; color: var(--text-4); font-size: 11.5px; }
-.offer-name { position: relative; padding-left: 20px !important; }
 .offer-name .offer-top { font-weight: 600; }
-.offer-caret { position: absolute; left: 2px; top: 11px; color: var(--text-4); font-size: 13px; }
-.offer-num { font-variant-numeric: tabular-nums; }
-.offer-state .chip { margin-bottom: 2px; }
+/* one fact per column, so the eye can read straight down */
+.offer-row > td { white-space: nowrap; }
+.offer-row > td:nth-child(4) { white-space: normal; }
+/* an offer that fits none of the shapes you said you would accept */
+.offer-flag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--text-4);
+  font-size: 10.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
 
-/* how long you have, marked at the same five days the rest of the app marks */
-.offer-due .offer-top { color: var(--text-2); }
-.offer-due.urgent .offer-top { color: var(--danger-text); font-weight: 500; }
 
-/* what you can do from here, derived from where the deal has got to */
-.offer-acts { white-space: nowrap; }
+/* asking for the ballpark and the guide, which opens an NDA */
+.offer-asking { margin: 0 0 8px; max-width: 34ch; color: var(--text-3); font-size: 11.5px; line-height: 1.5; white-space: normal; }
+.offer-asking-tools { display: flex; justify-content: flex-end; gap: 8px; }
+.offer-asked { display: block; color: var(--text-4); font-size: 11.5px; white-space: normal; }
+
+/* the one action on a match */
+.offer-acts { white-space: nowrap; text-align: right; }
 .offer-acts .ghost.small { width: auto; margin: 0 0 4px 6px; }
-.offer-go { border-color: var(--accent-ring); color: var(--cyan); }
-/* the way out stays reachable but does not compete with the way on */
-.offer-no { border-color: transparent; color: var(--text-4); }
-.offer-no:hover { border-color: var(--danger); color: var(--danger-text); }
-.offer-decline { display: grid; gap: 8px; width: 17rem; white-space: normal; cursor: default; }
-.offer-decline .log-tools { justify-content: flex-end; }
 
-/* what opens under a row */
-.offer-detail > td { padding: 0 0 22px; border-top: 0; }
-.offer-panels {
-  display: grid;
-  gap: 18px;
-  padding: 18px 20px 20px;
-  border-radius: 10px;
-  background: var(--wash);
-}
 
-/* Label over value, in as many columns as the width allows. Label beside value
-   in a half-width column made both sides too narrow to hold a phrase, so each
-   wrapped while the other half of the page sat empty. */
-.offer-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
-  gap: 16px 28px;
-}
-.offer-cell { display: grid; align-content: start; gap: 3px; min-width: 0; }
-.offer-cell.wide { grid-column: span 2; }
-.offer-label {
-  color: var(--text-4);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-.offer-value { color: var(--text-2); font-size: 12.5px; line-height: 1.5; }
-
-/* who rides and who does not, above the terms and ruled off from them */
-.offer-fit { padding-bottom: 18px; border-bottom: 1px solid var(--hair); }
-.offer-fit .offer-cell:first-child .offer-value { color: var(--text); font-weight: 500; }
-
-.offer-where { padding-top: 14px; border-top: 1px solid var(--hair); }
-.offer-heading {
-  margin: 0 0 14px;
-  color: var(--text-4);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-.offer-where .track { margin: 0 0 18px; }
-.offer-where .step-list { margin: 0; }
-
-@media (max-width: 760px) {
-  .offer-cell.wide { grid-column: span 1; }
-  .offer-panels { padding: 14px; }
-}

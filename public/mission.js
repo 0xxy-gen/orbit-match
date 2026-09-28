@@ -9,8 +9,7 @@
 // stands, and it is one track per launch, never one per mission: a mission of
 // three satellites can be on two launches at different points, and a single
 // track would have to lie about one of them.
-import { MISSION_ROWS, PHASES, DEAL, LISTINGS } from './demo-data.js';
-import { stepsFor, stepWindow } from './procurement-path.js';
+import { MISSION_ROWS, LISTINGS } from './demo-data.js';
 import { COUNTRIES, EXPORT_CONTROL, RIDE_PREFERENCES, FLEXIBILITY, quarterRank } from './mission-options.js';
 import { satelliteTable, satelliteEditor } from './satellite-table.js';
 import { assistant, toggleAssistant, STAR } from './assistant.js';
@@ -128,6 +127,11 @@ function save_() {
 addEventListener('keydown', event => {
   // Escape backs out of a pending confirmation rather than confirming it — the
   // key people press to mean "no" must never be the one that means "yes".
+  if (event.key === 'Escape' && asking) {
+    asking = null;
+    render();
+    return;
+  }
   if (event.key === 'Escape' && withdrawing) {
     withdrawing = false;
     render();
@@ -349,19 +353,6 @@ function facts(pairs) {
   return list;
 }
 
-function launchTrack(launch) {
-  const wrap = el('div', 'track mini');
-  PHASES.forEach((phase, index) => {
-    const step = el('div', `track-step${index <= launch.reached ? ' done' : ''}${index === launch.reached ? ' here' : ''}`);
-    step.append(el('span', 'track-dot'));
-    const labels = el('div', 'track-labels');
-    labels.append(el('span', 'track-phase', phase));
-    step.append(labels);
-    wrap.append(step);
-  });
-  return wrap;
-}
-
 // ── the two panels ──────────────────────────────────────────────────────────
 
 // Overview is the mission: what was entered, and the spacecraft it is for.
@@ -483,48 +474,6 @@ function overview() {
   return wrap;
 }
 
-// ── Procurement ─────────────────────────────────────────────────────────────
-//
-// One tab, not two. "Which of my satellites ride this launch" and "where has
-// this launch got to" are different questions about the same object, and giving
-// each its own tab means the same launch appears twice and you check both
-// places to understand one thing.
-//
-// So a launch card carries both: the manifest — what is on it and what it
-// weighs, which is the launch configuration — and the phase it has reached with
-// whatever clock is running against it.
-// Whether this listing could carry this satellite, and if not, why not.
-//
-// Said out loud rather than left to the reader to work out from two tables.
-// "Cannot take Aurora-T" is worth nothing on its own; "its window is after this
-// launch" tells you which lever to pull.
-function fitFor(listing, satellite) {
-  if (!listing) return { ok: true };
-
-  const from = satellite.windowFrom;
-  const to = satellite.windowTo;
-  if (from && quarterRank(listing.window) < quarterRank(from)) {
-    return { ok: false, why: `flies before its window opens in ${from}` };
-  }
-  if (to && quarterRank(listing.window) > quarterRank(to)) {
-    return { ok: false, why: `flies after its window closes in ${to}` };
-  }
-
-  const altitude = Number(satellite.altitude);
-  if (altitude && listing.alt && Math.abs(listing.alt - altitude) > 60) {
-    return { ok: false, why: `${listing.alt} km is too far from its ${altitude} km` };
-  }
-  const inclination = Number(satellite.inclination);
-  if (inclination && listing.inc && Math.abs(listing.inc - inclination) > 2) {
-    return { ok: false, why: `${listing.inc}° does not reach its ${inclination}°` };
-  }
-  const mass = Number(satellite.mass) || 0;
-  if (listing.massPerPort && mass > listing.massPerPort) {
-    return { ok: false, why: `${mass} kg is over the ${listing.massPerPort} kg per port` };
-  }
-  return { ok: true };
-}
-
 // Which launch of which configuration an offer fills.
 //
 // Not just "Configuration A": A is two launches and a deal answers one of them.
@@ -556,27 +505,58 @@ function fillsFor(on) {
 // Declining takes a reason, optionally. A decline with no reason is information
 // lost twice over: the seller cannot fix what they were not told about, and
 // matching learns nothing about what you will not take.
-const OFFER_ACTIONS = {
-  0: { go: 'Send a request', event: 'RequestCreated', said: 'Quotation request sent', no: 'Not this one' },
-  1: { go: 'Sign the NDA', event: 'NdaExecuted', said: 'NDA signed', no: 'Decline' },
-  2: { go: 'Accept quote', event: 'QuoteAccepted', said: 'Quote accepted', talk: 'Negotiate', no: 'Decline' },
-  3: { go: 'Sign the agreement', event: 'AgreementExecuted', said: 'LSA and SOW signed', no: 'Decline' },
-};
+// One table, with the state as a column.
+//
+// This was two tables with their own headings, which said the same thing more
+// loudly and cost a header row each. The distinction that split them was real
+// though: a matched listing's figure is arithmetic off an advertised rate,
+// while a quote is a number someone has committed to. That now lives in the
+// value — "~$4.90M" against "$6.53M" — rather than in a column heading that
+// could only say one of them at a time. The tilde is the whole marker: a word
+// beside it said the same thing a third time and read like a typo.
+const OFFER_COLUMNS = ['Listing', 'Vehicle', 'Company', 'Carrying', 'Window', 'Matched on', ''];
 
-// No "what's next" column. It held a sentence — "Approve, reject or negotiate
-// the quote" — sitting beside the buttons that say the same thing and can be
-// pressed. The buttons name the step well enough: "Sign the NDA" tells you
-// where the deal is. What the column could not say, and the clock can, is how
-// long you have.
-const OFFER_COLUMNS = ['Launch', 'Carrying', 'Fills', 'Window', 'Price', 'Due', ''];
+// The one date format this app writes: 28 Sept 2026, matching the fixture.
+// toDateString gives "Sep 28 2026", which sat next to "22 Sept 2026" and read
+// like two different systems.
+function today() {
+  const now = new Date();
+  const month = now.toLocaleString('en-GB', { month: 'short' });
+  return `${now.getDate()} ${month === 'Sep' ? 'Sept' : month} ${now.getFullYear()}`;
+}
+
+// How long ago the matcher paired this listing with the mission.
+function sinceMatch(when) {
+  const days = Math.round((Date.now() - Date.parse(`${String(when).replace('Sept', 'Sep')} 12:00`)) / (24 * 60 * 60 * 1000));
+  if (!Number.isFinite(days) || days < 1) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 14) return `${days} days ago`;
+  if (days < 60) {
+    const weeks = Math.round(days / 7);
+    return weeks === 1 ? 'a week ago' : `${weeks} weeks ago`;
+  }
+  const months = Math.round(days / 30);
+  return months === 1 ? 'a month ago' : `${months} months ago`;
+}
+
+// Which satellites an offer is for.
+//
+// `carries` when the offer names them, because several competing offers can
+// name the same satellite and only one can ever be committed to. Otherwise the
+// satellites actually assigned to this launch.
+function carriedBy(launch) {
+  if (launch.carries) {
+    return row.satellites.filter(satellite => launch.carries.includes(satellite.name));
+  }
+  return row.satellites.filter(satellite => satellite.launch === launch.id);
+}
 
 function offerRow(launch) {
-  const on = row.satellites.filter(satellite => satellite.launch === launch.id);
+  const on = carriedBy(launch);
   const listing = LISTINGS.find(each => each.launcher === launch.listing);
   const fills = fillsFor(on);
-  const open = openPath.has(launch.id);
 
-  const line = el('tr', `offer-row${open ? ' open' : ''}`);
+  const line = el('tr', 'offer-row');
 
   const cell = (className, top, under) => {
     const td = el('td', className);
@@ -585,207 +565,126 @@ function offerRow(launch) {
     return td;
   };
 
-  const first = cell('offer-name', launch.listing, launch.seller);
-  const mark = el('span', 'offer-caret', open ? '⌄' : '›');
-  first.prepend(mark);
+  // A column each, not one cell holding three things.
+  //
+  // Reading down a column compares like with like: "Falcon 9" sits under
+  // "Spectrum" and the difference is free. As "Falcon 9 · SpaceX" against
+  // "Spectrum · Isar Aerospace" the eye has to take each string apart before it
+  // can compare anything.
+  const first = cell('offer-name', launch.listing);
+
+  // No Fills column. Which configuration slot an offer fills is decided by
+  // which satellites ride on it, so when the two agree the column restates
+  // Carrying. The case worth knowing is the opposite one — an offer that fits
+  // none of the shapes you stated — and that is a flag, because "—" could not
+  // tell it apart from having stated no shapes at all.
+  if (!fills.length && (row.configurations ?? []).some(option => option.added)) {
+    first.append(el('span', 'offer-flag', 'outside your configurations'));
+  }
   line.append(first);
 
-  line.append(cell(null, on.map(satellite => satellite.name).join(', ') || '—',
-    on.length ? `${on.reduce((sum, s) => sum + (Number(s.mass) || 0), 0)} kg` : null));
-  line.append(cell(null, fills.length
-    ? fills.map(({ option, at }) => `${option.letter} · Launch ${at + 1}`).join(', ')
-    : '—'));
-  line.append(cell(null, listing?.window ?? launch.window));
-  line.append(cell('offer-num', listing?.price ?? '—'));
+  line.append(cell(null, listing?.vehicle ?? '—'));
+  line.append(cell(null, launch.seller));
 
-  // Five days is the line the dashboard and Tasks already draw, so it is drawn
-  // here too — on the tab where you would actually act on it.
-  const urgent = launch.days !== null && launch.days !== undefined && launch.days <= 5;
-  line.append(cell(`offer-due${urgent ? ' urgent' : ''}`, launch.detail ?? '—'));
+  line.append(cell(null, on.map(satellite => satellite.name).join(', ') || '—'));
+  line.append(cell(null, listing?.window ?? launch.window));
+
+  // When the match was found, and how long it has sat. One from May and one
+  // from last week are different things even when everything else matches.
+  line.append(cell(null, launch.matchedOn ?? '—',
+    launch.matchedOn ? sinceMatch(launch.matchedOn) : null));
 
   line.append(offerActs(launch));
 
-  // The row is the disclosure. The buttons inside it stop their own clicks, so
-  // pressing Decline does not also unfold the row underneath it.
-  line.tabIndex = 0;
-  line.setAttribute('role', 'button');
-  line.setAttribute('aria-expanded', String(open));
-  const toggle = () => {
-    if (open) openPath.delete(launch.id);
-    else openPath.set(launch.id, {});
-    render();
-  };
-  line.addEventListener('click', toggle);
-  line.addEventListener('keydown', event => {
-    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); }
-  });
-
-  return { line, open, on, listing, fills };
+  return line;
 }
 
 // The buttons for wherever this deal has got to.
-function offerActs(launch) {
-  const td = el('td', 'offer-acts');
-  const can = OFFER_ACTIONS[launch.reached];
-  if (!can) return td;
+function offerActs(launch, as = 'td') {
+  const td = el(as, 'offer-acts');
 
-  const stop = event => event.stopPropagation();
-
-  if (declining === launch.id) {
-    // The reason, asked for once and never insisted on.
-    const box = el('div', 'offer-decline');
-    box.addEventListener('click', stop);
-    const why = el('textarea', 'log-input');
-    why.rows = 2;
-    why.placeholder = 'Why, for the seller (optional)';
-    why.setAttribute('aria-label', `Why ${launch.listing} is being declined`);
-
-    const tools = el('div', 'log-tools');
-    const back = el('button', 'ghost small', 'Cancel');
-    back.type = 'button';
-    back.addEventListener('click', () => { declining = null; render(); });
-    const send = el('button', 'submit compact', 'Decline');
-    send.type = 'button';
-    send.addEventListener('click', () => {
-      const said = why.value.trim();
-      log({ event: 'MatchWithdrawn',
-        text: `${can.no} — ${launch.listing}, ${launch.seller}.${said ? ` Reason given: ${said}` : ' No reason given.'}` });
-      row.launches = row.launches.filter(each => each.id !== launch.id);
-      declining = null;
-      render();
-      say(`${launch.listing} declined in this session only. Nothing was sent.`);
-    });
-    tools.append(back, send);
-    box.append(why, tools);
-    td.append(box);
+  // One ask, for the two things that answer the same question.
+  //
+  // A ballpark you cannot physically fit into is worth nothing, and the Payload
+  // User's Guide is what says whether you fit — so asking for one without the
+  // other is half a decision.
+  //
+  // It is armed rather than sent on the first click, because a seller cannot
+  // share either until there is a mutual NDA. The button is really "open an
+  // NDA", and a button should not do something bigger than it says.
+  if (launch.rom) {
+    const open = el('button', 'ghost small offer-go', 'Open the ROM');
+    open.type = 'button';
+    open.addEventListener('click', () => say(`Reading ${launch.rom.version} is not wired up in this prototype.`));
+    td.append(open);
     return td;
   }
 
-  const go = el('button', 'ghost small offer-go', can.go);
-  go.type = 'button';
-  go.addEventListener('click', event => {
-    stop(event);
-    launch.reached = Math.min(4, launch.reached + 1);
-    launch.status = PHASES?.[launch.reached]?.toLowerCase?.() ?? launch.status;
-    launch.detail = `${can.said} in this session`;
-    log({ event: can.event, text: `${can.said} — ${launch.listing}, ${launch.seller}.` });
-    render();
-    say(`${can.said}. Nothing is saved in the prototype.`);
-  });
-  td.append(go);
-
-  if (can.talk) {
-    const talk = el('button', 'ghost small', can.talk);
-    talk.type = 'button';
-    talk.addEventListener('click', event => {
-      stop(event);
-      log({ event: 'TermProposed', text: `Opened a negotiation on ${launch.listing}.` });
-      render();
-      say('A negotiation round is not wired up in this prototype.');
-    });
-    td.append(talk);
+  if (launch.asked) {
+    td.append(el('span', 'offer-asked', `Requested ${launch.asked} · NDA out for signature`));
+    return td;
   }
 
-  const no = el('button', 'ghost small offer-no', can.no);
-  no.type = 'button';
-  no.addEventListener('click', event => { stop(event); declining = launch.id; render(); });
-  td.append(no);
+  const armed = asking === launch.id;
+  if (armed) {
+    td.append(el('p', 'offer-asking',
+      `${launch.seller} cannot share either until a mutual NDA is signed. Requesting proposes one.`));
+  }
+
+  const tools = el('div', 'offer-asking-tools');
+  const ask = el('button', 'ghost small offer-go',
+    armed ? 'Request and sign the NDA' : "Request ROM and Payload User's Guide");
+  ask.type = 'button';
+  ask.addEventListener('click', () => {
+    if (!armed) { asking = launch.id; render(); return; }
+    launch.asked = today();
+    asking = null;
+    log({ event: 'NdaProposed', text: `Mutual NDA proposed with ${launch.seller} on ${launch.listing}.` });
+    log({ event: 'RfiSubmitted', text: `Asked ${launch.seller} for a ROM and the PUG on ${launch.listing}.` });
+    render();
+    say('Requested in this session only. Nothing left the prototype.');
+  });
+  tools.append(ask);
+
+  if (armed) {
+    const back = el('button', 'ghost small', 'Not yet');
+    back.type = 'button';
+    back.addEventListener('click', () => { asking = null; render(); });
+    tools.append(back);
+  }
+  td.append(tools);
 
   return td;
 }
 
-// A label over its value, in a grid that uses the width it has.
+// Managing matches, before a deal exists.
 //
-// Label beside value in a half-width column made both sides too narrow, so
-// "Payload delivery" and "14 Nov 2026 (L−8 weeks)" each wrapped while the right
-// half of the page sat empty. Stacked, nothing wraps and the whole row scans.
-function offerFacts(pairs, className = '') {
-  const grid = el('div', `offer-grid ${className}`.trim());
-  for (const [label, value, wide] of pairs) {
-    if (!value) continue;
-    const cell = el('div', `offer-cell${wide ? ' wide' : ''}`);
-    cell.append(el('span', 'offer-label', label), el('span', 'offer-value', value));
-    grid.append(cell);
-  }
-  return grid;
-}
-
-function offerDetail(launch, { on, listing }) {
-  const line = el('tr', 'offer-detail');
-  const cell = el('td');
-  cell.colSpan = OFFER_COLUMNS.length;
-
-  const panel = el('div', 'offer-panels');
-
-  // Who it takes, and who it does not.
-  //
-  // Grouped by reason rather than one line per satellite: Aurora-1 and Aurora-2
-  // were refused for the identical cause and said so twice. The reason is the
-  // useful part, so it is said once with everyone it applies to.
-  const cannot = new Map();
-  for (const satellite of row.satellites) {
-    if (satellite.launch === launch.id) continue;
-    const fit = fitFor(listing, satellite);
-    if (fit.ok) continue;
-    cannot.set(fit.why, [...(cannot.get(fit.why) ?? []), satellite.name]);
-  }
-  const could = row.satellites.filter(satellite =>
-    satellite.launch !== launch.id && fitFor(listing, satellite).ok);
-
-  panel.append(offerFacts([
-    ['Carries', on.length
-      ? `${on.map(s => s.name).join(', ')} · ${on.reduce((sum, s) => sum + (Number(s.mass) || 0), 0)} kg`
-      : 'Nothing yet', true],
-    ...(could.length ? [['Could also take', could.map(s => s.name).join(', '), true]] : []),
-    ...[...cannot].map(([why, names]) => [`Cannot take ${sentenceList(names)}`, why, true]),
-  ], 'offer-fit'));
-
-  if (listing) {
-    panel.append(offerFacts([
-      ['Ports', `${listing.ports} × up to ${listing.massPerPort} kg`],
-      ['Spare capacity', `${listing.spareMass} kg`],
-      ['Launch site', listing.site],
-      ['Integration', listing.integration.join(' or ')],
-      ['Offer', `${listing.offer} · flight ${listing.confirmed ? 'confirmed' : 'tentative'}`],
-      ['Payload delivery', `${listing.delivery} (${listing.lMinus})`],
-      ['Rebooking', listing.rebooking],
-      ['Deployers', listing.deployers.join(', '), true],
-      ['In the price', listing.included.join(', '), true],
-      ['Add-ons', listing.addOns.join(', '), true],
-    ]));
-  }
-
-  const where = el('section', 'offer-where');
-  where.append(el('h4', 'offer-heading', 'Where it stands'));
-  where.append(launchTrack(launch));
-  const marks = launch.listing === DEAL.listing ? DEAL.marks : {};
-  const seen = openPath.get(launch.id) ?? {};
-  where.append(stepWindow(stepsFor(launch.reached, marks), {
-    earlier: seen.earlier,
-    later: seen.later,
-    onEarlier: () => { openPath.set(launch.id, { ...seen, earlier: true }); render(); },
-    onLater: () => { openPath.set(launch.id, { ...seen, later: true }); render(); },
-  }));
-  panel.append(where);
-
-  cell.append(panel);
-  line.append(cell);
-  return line;
-}
-
+// A match is not an offer. Nobody has quoted anything, nobody has committed,
+// and the seller may not know you exist. Three states live in here and the flat
+// version could only say "matched" for all of them:
+//
+//   matched    a listing fits. Neither side has done anything.
+//   requested  you have asked. The ball is with them.
+//   accepted   both have said yes — which is where a match stops being a match
+//              and becomes a deal, and leaves this table.
+//
+// Mutual acceptance is the boundary because it is where the substance changes:
+// contacts are exchanged, the NDA opens, documents start to exist.
 function launches() {
   const wrap = el('div', 'mission-panel');
 
-  // Matches and deals are different things, and a single table made the columns
-  // lie about the matches. A match is the system saying a listing fits: nobody
-  // has been contacted, nothing has been offered, no clock is running, and
-  // "what's next" is the same sentence on every one of them. A deal has a
-  // counterparty, a clock and a history.
-  const all = row.launches ?? [];
-  const found = all.filter(launch => launch.reached === 0);
-  const live = all.filter(launch => launch.reached > 0);
+  // Deals with a clock first, then matches nobody has answered, newest first.
+  // The status column says which is which, so they share one table.
+  const offeredAt = launch => {
+    const parsed = Date.parse(String(launch.matchedOn ?? '').replace('Sept', 'Sep'));
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  const all = [...(row.launches ?? [])].sort((a, b) => {
+    const clock = (a.days ?? Infinity) - (b.days ?? Infinity);
+    return clock !== 0 ? clock : offeredAt(b) - offeredAt(a);
+  });
 
-  const table = (launches, note) => {
+  if (all.length) {
     const grid = el('table', 'offer-table');
     const head = el('thead');
     const headRow = el('tr');
@@ -794,31 +693,12 @@ function launches() {
     grid.append(head);
 
     const body = el('tbody');
-    for (const launch of launches) {
-      const built = offerRow(launch);
-      body.append(built.line);
-      if (built.open) body.append(offerDetail(launch, built));
-    }
+    for (const launch of all) body.append(offerRow(launch));
     grid.append(body);
 
     const scroll = el('div', 'sat-scroll');
     scroll.append(grid);
-    if (note) wrap.append(el('p', 'panel-note', note));
     wrap.append(scroll);
-  };
-
-  if (found.length) {
-    const head = el('h3', 'panel-heading', 'Matched, nothing sent');
-    head.append(el('span', 'tab-count', String(found.length)));
-    wrap.append(head);
-    table(found, 'Listings that fit this mission. The seller has not been contacted and knows nothing about it yet.');
-  }
-
-  if (live.length) {
-    const head = el('h3', `panel-heading${found.length ? ' band' : ''}`, 'In procurement');
-    head.append(el('span', 'tab-count', String(live.length)));
-    wrap.append(head);
-    table(live);
   }
 
   const loose = row.satellites.filter(satellite => !satellite.launch);
@@ -876,9 +756,8 @@ let grouping = null;   // the configuration being built or edited, if any
 let applying = null;   // the conditional suggestion whose change is armed, if any
 let showDismissed = false;
 let noting = null;     // the configuration whose note is open for editing, if any
+let asking = null;   // the match whose request is armed, if any
 let dragging = null;   // index of the configuration being dragged, if any
-const openPath = new Map();  // launch id → which ends of its path are unfolded
-let declining = null;  // the launch whose decline is asking for a reason
 
 function entryRow(entry, index) {
   const item = el('li', `log-entry${entry.event ? ' system' : ''}`);
@@ -2081,14 +1960,17 @@ function render() {
       // Counts what you have added, not what Cosmo has offered: the tab should
       // report your commitments, the same as Procurement reports real launches.
       ['configuration', 'Launch Configurations', configuration, (row.configurations ?? []).filter(option => option.added).length],
-      ['procurement', 'Procurement', launches, (row.launches ?? []).length],
+      ['matches', 'Matches', launches, (row.launches ?? []).length],
     ]
     : [['overview', 'Overview', overview]];
 
   // ?tab=satellites was a real tab until the merge; send those links to where
   // the satellites went rather than dropping them on a default.
   if (tab === 'satellites') tab = 'overview';
-  if (tab === 'launches') tab = 'procurement';
+  // every name this tab has had, so old links still land
+  for (const was of ['launches', 'procurement', 'procurement2', 'offers', 'offers2']) {
+    if (tab === was) tab = 'matches';
+  }
   if (tab === 'updates') tab = 'overview';
   if (!panels.some(([key]) => key === tab)) tab = 'overview';
 
