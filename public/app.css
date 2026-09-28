@@ -3851,6 +3851,18 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
 .offer-num { font-variant-numeric: tabular-nums; }
 .offer-state .chip { margin-bottom: 2px; }
 
+/* the move, and the clock under it */
+.offer-next .offer-top { color: var(--text); font-weight: 500; }
+
+/* what you can do from here, derived from where the deal has got to */
+.offer-acts { white-space: nowrap; }
+.offer-acts .ghost.small { width: auto; margin: 0 0 4px 6px; }
+.offer-go { border-color: var(--accent-ring); color: var(--cyan); }
+.offer-no { color: var(--text-4); }
+.offer-no:hover { border-color: var(--danger); color: var(--danger-text); }
+.offer-decline { display: grid; gap: 8px; width: 17rem; white-space: normal; cursor: default; }
+.offer-decline .log-tools { justify-content: flex-end; }
+
 /* what opens under a row */
 .offer-detail > td { padding: 0 0 22px; border-top: 0; }
 .offer-panels {

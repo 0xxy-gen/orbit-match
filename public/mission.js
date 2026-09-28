@@ -11,6 +11,7 @@
 // track would have to lie about one of them.
 import { MISSION_ROWS, PHASES, DEAL, LISTINGS } from './demo-data.js';
 import { stepsFor, stepWindow } from './procurement-path.js';
+import { PHASE_STEP } from './demo-data.js';
 import { COUNTRIES, EXPORT_CONTROL, RIDE_PREFERENCES, FLEXIBILITY, quarterRank } from './mission-options.js';
 import { satelliteTable, satelliteEditor } from './satellite-table.js';
 import { assistant, toggleAssistant, STAR } from './assistant.js';
@@ -546,7 +547,24 @@ function fillsFor(on) {
 // are the things you actually weigh one against another; everything else opens
 // under the row it belongs to.
 
-const OFFER_COLUMNS = ['Launch', 'Fills', 'Carrying', 'Orbit', 'Window', 'Price', 'Respond by', 'Status'];
+// What you can do, and it depends where the deal is.
+//
+// A single Accept on every row would mean a different thing on each one:
+// accepting an NDA is not accepting a quote. The seventeen-step path already
+// names whose turn it is and what the move is called, so the buttons come from
+// there rather than from a generic set.
+//
+// Declining takes a reason, optionally. A decline with no reason is information
+// lost twice over: the seller cannot fix what they were not told about, and
+// matching learns nothing about what you will not take.
+const OFFER_ACTIONS = {
+  0: { go: 'Send a request', event: 'RequestCreated', said: 'Quotation request sent', no: 'Not this one' },
+  1: { go: 'Sign the NDA', event: 'NdaExecuted', said: 'NDA signed', no: 'Decline' },
+  2: { go: 'Accept quote', event: 'QuoteAccepted', said: 'Quote accepted', talk: 'Negotiate', no: 'Decline' },
+  3: { go: 'Sign the agreement', event: 'AgreementExecuted', said: 'LSA and SOW signed', no: 'Decline' },
+};
+
+const OFFER_COLUMNS = ['Launch', 'Carrying', 'Fills', 'Window', 'Price', "What's next", ''];
 
 function offerRow(launch) {
   const on = row.satellites.filter(satellite => satellite.launch === launch.id);
@@ -568,36 +586,96 @@ function offerRow(launch) {
   first.prepend(mark);
   line.append(first);
 
+  line.append(cell(null, on.map(satellite => satellite.name).join(', ') || '—',
+    on.length ? `${on.reduce((sum, s) => sum + (Number(s.mass) || 0), 0)} kg` : null));
   line.append(cell(null, fills.length
     ? fills.map(({ option, at }) => `${option.letter} · Launch ${at + 1}`).join(', ')
     : '—'));
-  line.append(cell(null, on.map(satellite => satellite.name).join(', ') || '—',
-    on.length ? `${on.reduce((sum, s) => sum + (Number(s.mass) || 0), 0)} kg` : null));
-  line.append(cell(null, listing ? `${listing.orbit} ${listing.altitude}` : '—',
-    listing ? `${listing.inclination}${listing.ltan && listing.ltan !== '—' ? ` · ${listing.ltan}` : ''}` : null));
   line.append(cell(null, listing?.window ?? launch.window));
   line.append(cell('offer-num', listing?.price ?? '—'));
-  line.append(cell(null, listing?.respondBy ?? '—'));
 
-  const state = el('td', 'offer-state');
-  state.append(el('span', `chip status ${launch.status.replace(/\s+/g, '-')}`, launch.status));
-  if (launch.detail) state.append(el('span', 'offer-under', launch.detail));
-  line.append(state);
+  // What to do, rather than what state it is in. "in procurement" names a phase;
+  // "Approve, reject or negotiate the quote" names the move, and the clock under
+  // it says by when.
+  const step = stepsFor(launch.reached)[PHASE_STEP[launch.reached]] ?? {};
+  line.append(cell('offer-next', step.label ?? '—', launch.detail));
 
-  line.tabIndex = 0;
-  line.setAttribute('role', 'button');
-  line.setAttribute('aria-expanded', String(open));
-  const toggle = () => {
-    if (open) openPath.delete(launch.id);
-    else openPath.set(launch.id, {});
-    render();
-  };
-  line.addEventListener('click', toggle);
-  line.addEventListener('keydown', event => {
-    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); }
-  });
-
+  line.append(offerActs(launch));
   return { line, open, on, listing, fills };
+}
+
+// The buttons for wherever this deal has got to.
+function offerActs(launch) {
+  const td = el('td', 'offer-acts');
+  const can = OFFER_ACTIONS[launch.reached];
+  if (!can) {
+    td.append(el('span', 'offer-under', 'Nothing to do'));
+    return td;
+  }
+
+  const stop = event => event.stopPropagation();
+
+  if (declining === launch.id) {
+    // The reason, asked for once and never insisted on.
+    const box = el('div', 'offer-decline');
+    box.addEventListener('click', stop);
+    const why = el('textarea', 'log-input');
+    why.rows = 2;
+    why.placeholder = 'Why, for the seller (optional)';
+    why.setAttribute('aria-label', `Why ${launch.listing} is being declined`);
+
+    const tools = el('div', 'log-tools');
+    const back = el('button', 'ghost small', 'Cancel');
+    back.type = 'button';
+    back.addEventListener('click', () => { declining = null; render(); });
+    const send = el('button', 'submit compact', 'Decline');
+    send.type = 'button';
+    send.addEventListener('click', () => {
+      const said = why.value.trim();
+      log({ event: 'MatchWithdrawn',
+        text: `${can.no} — ${launch.listing}, ${launch.seller}.${said ? ` Reason given: ${said}` : ' No reason given.'}` });
+      row.launches = row.launches.filter(each => each.id !== launch.id);
+      declining = null;
+      render();
+      say(`${launch.listing} declined in this session only. Nothing was sent.`);
+    });
+    tools.append(back, send);
+    box.append(why, tools);
+    td.append(box);
+    return td;
+  }
+
+  const go = el('button', 'ghost small offer-go', can.go);
+  go.type = 'button';
+  go.addEventListener('click', event => {
+    stop(event);
+    launch.reached = Math.min(4, launch.reached + 1);
+    launch.status = PHASES?.[launch.reached]?.toLowerCase?.() ?? launch.status;
+    launch.detail = `${can.said} in this session`;
+    log({ event: can.event, text: `${can.said} — ${launch.listing}, ${launch.seller}.` });
+    render();
+    say(`${can.said}. Nothing is saved in the prototype.`);
+  });
+  td.append(go);
+
+  if (can.talk) {
+    const talk = el('button', 'ghost small', can.talk);
+    talk.type = 'button';
+    talk.addEventListener('click', event => {
+      stop(event);
+      log({ event: 'TermProposed', text: `Opened a negotiation on ${launch.listing}.` });
+      render();
+      say('A negotiation round is not wired up in this prototype.');
+    });
+    td.append(talk);
+  }
+
+  const no = el('button', 'ghost small offer-no', can.no);
+  no.type = 'button';
+  no.addEventListener('click', event => { stop(event); declining = launch.id; render(); });
+  td.append(no);
+
+  return td;
 }
 
 // A label over its value, in a grid that uses the width it has.
@@ -682,22 +760,49 @@ function offerDetail(launch, { on, listing }) {
 function launches() {
   const wrap = el('div', 'mission-panel');
 
-  if ((row.launches ?? []).length) {
-    const table = el('table', 'offer-table');
+  // Matches and deals are different things, and a single table made the columns
+  // lie about the matches. A match is the system saying a listing fits: nobody
+  // has been contacted, nothing has been offered, no clock is running, and
+  // "what's next" is the same sentence on every one of them. A deal has a
+  // counterparty, a clock and a history.
+  const all = row.launches ?? [];
+  const found = all.filter(launch => launch.reached === 0);
+  const live = all.filter(launch => launch.reached > 0);
+
+  const table = (launches, note) => {
+    const grid = el('table', 'offer-table');
     const head = el('thead');
     const headRow = el('tr');
     for (const label of OFFER_COLUMNS) headRow.append(el('th', null, label));
     head.append(headRow);
-    table.append(head);
+    grid.append(head);
 
     const body = el('tbody');
-    for (const launch of row.launches) {
+    for (const launch of launches) {
       const built = offerRow(launch);
       body.append(built.line);
       if (built.open) body.append(offerDetail(launch, built));
     }
-    table.append(body);
-    wrap.append(el('div', 'sat-scroll').appendChild(table).parentElement);
+    grid.append(body);
+
+    const scroll = el('div', 'sat-scroll');
+    scroll.append(grid);
+    if (note) wrap.append(el('p', 'panel-note', note));
+    wrap.append(scroll);
+  };
+
+  if (found.length) {
+    const head = el('h3', 'panel-heading', 'Matched, nothing sent');
+    head.append(el('span', 'tab-count', String(found.length)));
+    wrap.append(head);
+    table(found, 'Listings that fit this mission. The seller has not been contacted and knows nothing about it yet.');
+  }
+
+  if (live.length) {
+    const head = el('h3', `panel-heading${found.length ? ' band' : ''}`, 'In procurement');
+    head.append(el('span', 'tab-count', String(live.length)));
+    wrap.append(head);
+    table(live);
   }
 
   const loose = row.satellites.filter(satellite => !satellite.launch);
@@ -757,6 +862,7 @@ let showDismissed = false;
 let noting = null;     // the configuration whose note is open for editing, if any
 let dragging = null;   // index of the configuration being dragged, if any
 const openPath = new Map();  // launch id → which ends of its path are unfolded
+let declining = null;  // the launch whose decline is asking for a reason
 
 function entryRow(entry, index) {
   const item = el('li', `log-entry${entry.event ? ' system' : ''}`);
