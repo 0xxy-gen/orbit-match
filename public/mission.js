@@ -11,7 +11,6 @@
 // track would have to lie about one of them.
 import { MISSION_ROWS, PHASES, DEAL, LISTINGS } from './demo-data.js';
 import { stepsFor, stepWindow } from './procurement-path.js';
-import { PHASE_STEP } from './demo-data.js';
 import { COUNTRIES, EXPORT_CONTROL, RIDE_PREFERENCES, FLEXIBILITY, quarterRank } from './mission-options.js';
 import { satelliteTable, satelliteEditor } from './satellite-table.js';
 import { assistant, toggleAssistant, STAR } from './assistant.js';
@@ -564,7 +563,12 @@ const OFFER_ACTIONS = {
   3: { go: 'Sign the agreement', event: 'AgreementExecuted', said: 'LSA and SOW signed', no: 'Decline' },
 };
 
-const OFFER_COLUMNS = ['Launch', 'Carrying', 'Fills', 'Window', 'Price', "What's next", ''];
+// No "what's next" column. It held a sentence — "Approve, reject or negotiate
+// the quote" — sitting beside the buttons that say the same thing and can be
+// pressed. The buttons name the step well enough: "Sign the NDA" tells you
+// where the deal is. What the column could not say, and the clock can, is how
+// long you have.
+const OFFER_COLUMNS = ['Launch', 'Carrying', 'Fills', 'Window', 'Price', 'Due', ''];
 
 function offerRow(launch) {
   const on = row.satellites.filter(satellite => satellite.launch === launch.id);
@@ -594,11 +598,10 @@ function offerRow(launch) {
   line.append(cell(null, listing?.window ?? launch.window));
   line.append(cell('offer-num', listing?.price ?? '—'));
 
-  // What to do, rather than what state it is in. "in procurement" names a phase;
-  // "Approve, reject or negotiate the quote" names the move, and the clock under
-  // it says by when.
-  const step = stepsFor(launch.reached)[PHASE_STEP[launch.reached]] ?? {};
-  line.append(cell('offer-next', step.label ?? '—', launch.detail));
+  // Five days is the line the dashboard and Tasks already draw, so it is drawn
+  // here too — on the tab where you would actually act on it.
+  const urgent = launch.days !== null && launch.days !== undefined && launch.days <= 5;
+  line.append(cell(`offer-due${urgent ? ' urgent' : ''}`, launch.detail ?? '—'));
 
   line.append(offerActs(launch));
   return { line, open, on, listing, fills };
@@ -608,10 +611,7 @@ function offerRow(launch) {
 function offerActs(launch) {
   const td = el('td', 'offer-acts');
   const can = OFFER_ACTIONS[launch.reached];
-  if (!can) {
-    td.append(el('span', 'offer-under', 'Nothing to do'));
-    return td;
-  }
+  if (!can) return td;
 
   const stop = event => event.stopPropagation();
 
