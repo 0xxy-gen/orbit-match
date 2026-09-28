@@ -604,6 +604,22 @@ function offerRow(launch) {
   line.append(cell(`offer-due${urgent ? ' urgent' : ''}`, launch.detail ?? '—'));
 
   line.append(offerActs(launch));
+
+  // The row is the disclosure. The buttons inside it stop their own clicks, so
+  // pressing Decline does not also unfold the row underneath it.
+  line.tabIndex = 0;
+  line.setAttribute('role', 'button');
+  line.setAttribute('aria-expanded', String(open));
+  const toggle = () => {
+    if (open) openPath.delete(launch.id);
+    else openPath.set(launch.id, {});
+    render();
+  };
+  line.addEventListener('click', toggle);
+  line.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); }
+  });
+
   return { line, open, on, listing, fills };
 }
 
