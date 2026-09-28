@@ -776,50 +776,6 @@ function offerDetail(launch, { on, listing }) {
 function launches() {
   const wrap = el('div', 'mission-panel');
 
-  // A summary of what the rows cannot say.
-  //
-  // Not a count of phases: the section headings already carry those, and with
-  // three rows on screen a strip saying "2 in procurement" is the same fact a
-  // third time. These three are mission-level and appear nowhere else — whether
-  // every satellite has a launch, what the deals on the table would cost
-  // against the budget, and which clock runs out first.
-  const placed = row.satellites.filter(satellite => satellite.launch).length;
-  const total = row.satellites.length;
-
-  const money = (row.launches ?? []).reduce((sum, launch) => {
-    const listing = LISTINGS.find(each => each.launcher === launch.listing);
-    const rate = Number(String(listing?.price ?? '').replace(/[^0-9.]/g, '')) * 1000;
-    if (!rate) return sum;
-    const mass = row.satellites
-      .filter(satellite => satellite.launch === launch.id)
-      .reduce((kg, satellite) => kg + (Number(satellite.mass) || 0), 0);
-    return sum + rate * mass;
-  }, 0);
-
-  const budget = Number(String(row.budget ?? '').replace(/[^0-9]/g, ''));
-  const soonest = (row.launches ?? [])
-    .map(launch => launch.days)
-    .filter(days => days !== null && days !== undefined)
-    .sort((a, b) => a - b)[0];
-
-  const strip = el('p', 'offer-summary');
-  const say = [];
-  say.push(placed === total
-    ? `All ${total} satellite${total === 1 ? '' : 's'} on a launch`
-    : `${placed} of ${total} satellites on a launch`);
-  if (money) {
-    const priced = `$${(money / 1e6).toFixed(1)}M`;
-    say.push(budget
-      ? `${priced} on the table, against a ${`$${(budget / 1e6).toFixed(1)}M`} budget`
-      : `${priced} on the table`);
-  }
-  if (soonest !== undefined) {
-    say.push(`soonest deadline in ${soonest} day${soonest === 1 ? '' : 's'}`);
-  }
-  strip.textContent = say.join(' · ');
-  if (soonest !== undefined && soonest <= 5) strip.classList.add('urgent');
-  if ((row.launches ?? []).length) wrap.append(strip);
-
   // Matches and deals are different things, and a single table made the columns
   // lie about the matches. A match is the system saying a listing fits: nobody
   // has been contacted, nothing has been offered, no clock is running, and
