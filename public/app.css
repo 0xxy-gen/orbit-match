@@ -3851,6 +3851,18 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
 .offer-num { font-variant-numeric: tabular-nums; }
 .offer-state .chip { margin-bottom: 2px; }
 
+/* the mission-level picture, above the rows it is drawn from */
+.offer-summary {
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  background: var(--wash);
+  color: var(--text-2);
+  font-size: 13px;
+}
+.offer-summary.urgent { border-color: var(--danger); }
+
 /* how long you have, marked at the same five days the rest of the app marks */
 .offer-due .offer-top { color: var(--text-2); }
 .offer-due.urgent .offer-top { color: var(--danger-text); font-weight: 500; }
