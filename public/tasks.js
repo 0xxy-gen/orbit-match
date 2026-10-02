@@ -74,7 +74,7 @@ function loose() {
       out.push({
         what: 'No launch configuration, so sellers will assume any grouping works',
         where: row.name,
-        href: `/mission.html?id=${row.id}&view=buy&tab=configuration`,
+        href: `/mission.html?id=${row.id}&view=buy&tab=overview#configurations`,
       });
     }
   }

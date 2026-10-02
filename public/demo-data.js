@@ -18,6 +18,15 @@ export const STATUSES = [
   'booked',
 ];
 
+// What a seller can provide alongside the ride. A fixed list, so a listing can
+// be asked what it leaves out — which is the thing that makes two rates
+// comparable. D-Orbit looks dear per kilo until you notice the ION is an OTV
+// and the delivery is in the price.
+export const SERVICES = [
+  'Separation system', 'Delivery', 'Testing', 'Integration support',
+  'Licensing', 'Bus', 'OTV',
+];
+
 // ─── the people on your side of the deal ────────────────────────────────────
 //
 // Who can be tagged in an activity entry. A real build reads this from the
@@ -43,145 +52,209 @@ export const LISTINGS = [
   {
     id: 'l1', alt: 520, inc: 97.5, seller: 'Isar Aerospace', launcher: 'Spectrum F3', site: 'Andøya, Norway',
     orbit: 'SSO', altitude: '520 km', inclination: '97.5°', window: 'Q3 2026',
-    lMinus: 'L−6 weeks', delivery: '12 Jun 2026', spareMass: 180, price: '$48k / kg',
+    lMinus: 'L−6 weeks', delivery: 'Jun 2026', spareMass: 180, price: '$48k / kg',
     watchers: 6, matches: 2,
-    sellerType: 'Launcher', nation: 'DE', vehicle: 'Spectrum', offer: 'Firm', confirmed: true,
+    sellerType: 'Launcher', nation: 'Germany', vehicle: 'Spectrum', offer: 'Firm', confirmed: true,
     ports: 6, massPerPort: 200, ltan: '10:30', integration: ['Andøya', 'Augsburg'],
     deployers: ['ESPA Grande port', 'Rocket Lab CSD', 'Exolaunch EXOpod Nova'],
     respondBy: '5 Oct 2026', rebooking: 'One free slip to the next Spectrum flight',
-    included: ['Separation system', 'Integration support', 'Licensing'], addOns: ['Testing +$50k', 'Bus +on request'],
+    services: {
+      'Separation system': 'included',
+      'Integration support': 'included',
+      'Licensing': 'included',
+      'Testing': '+$50k',
+      'Bus': 'on request',
+    },
   },
   {
     id: 'l2', alt: 560, inc: 97.8, seller: 'Arianespace', launcher: 'Vega C VV29', site: 'Kourou, French Guiana',
     orbit: 'SSO', altitude: '560 km', inclination: '97.8°', window: 'Q4 2026',
-    lMinus: 'L−8 weeks', delivery: '02 Sep 2026', spareMass: 420, price: '$39k / kg',
+    lMinus: 'L−8 weeks', delivery: 'Sep 2026', spareMass: 420, price: '$39k / kg',
     watchers: 3, matches: 1,
-    sellerType: 'Launcher', nation: 'FR', vehicle: 'Vega C', offer: 'Firm', confirmed: true,
+    sellerType: 'Launcher', nation: 'France', vehicle: 'Vega C', offer: 'Firm', confirmed: true,
     ports: 12, massPerPort: 300, ltan: '10:30', integration: ['Kourou'],
     deployers: ['ESPA Grande port', 'ISISPACE QuadPack', 'Exolaunch CarboNIX'],
     respondBy: '20 Nov 2026', rebooking: 'Rebooking fee 12% after L−4 months',
-    included: ['Separation system', 'Delivery', 'Licensing'], addOns: ['Testing +$60k', 'OTV +on request'],
+    services: {
+      'Separation system': 'included',
+      'Delivery': 'included',
+      'Licensing': 'included',
+      'Testing': '+$60k',
+      'OTV': 'on request',
+    },
   },
   {
     id: 'l3', alt: 450, inc: 51.6, seller: 'SpaceX', launcher: 'Bandwagon-5', site: 'Cape Canaveral, USA',
     orbit: 'LEO', altitude: '450 km', inclination: '51.6°', window: 'Q1 2027',
-    lMinus: 'L−10 weeks', delivery: '21 Nov 2026', spareMass: 1200, price: '$30k / kg',
+    lMinus: 'L−10 weeks', delivery: 'Nov 2026', spareMass: 1200, price: '$30k / kg',
     watchers: 1, matches: 0,
-    sellerType: 'Launcher', nation: 'US', vehicle: 'Falcon 9', offer: 'Firm', confirmed: true,
+    sellerType: 'Launcher', nation: 'United States', vehicle: 'Falcon 9', offer: 'Firm', confirmed: true,
     ports: 20, massPerPort: 830, ltan: '—', integration: ['Cape Canaveral', 'Vandenberg'],
     deployers: ['ESPA Grande port', 'Rocket Lab CSD', 'Motorized Lightband', 'Clamp band'],
     respondBy: '14 Dec 2026', rebooking: 'One rebooking within 12 months',
-    included: ['Separation system', 'Integration support'], addOns: ['Testing +$60k', 'Delivery +$12k', 'OTV +on request'],
+    services: {
+      'Separation system': 'included',
+      'Integration support': 'included',
+      'Testing': '+$60k',
+      'Delivery': '+$12k',
+      'OTV': 'on request',
+    },
   },
   {
     id: 'l4', alt: 505, inc: 97.4, seller: 'NewSpace India Limited', launcher: 'PSLV-C64', site: 'Sriharikota, India',
     orbit: 'SSO', altitude: '505 km', inclination: '97.4°', window: 'Q2 2027',
-    lMinus: 'L−6 weeks', delivery: '19 Feb 2027', spareMass: 95, price: 'On request',
+    lMinus: 'L−6 weeks', delivery: 'Feb 2027', spareMass: 95, price: 'On request',
     watchers: 4, matches: 2,
-    sellerType: 'Broker', nation: 'IN', vehicle: 'PSLV', offer: 'Waitlist', confirmed: false,
+    sellerType: 'Broker', nation: 'India', vehicle: 'PSLV', offer: 'Waitlist', confirmed: false,
     ports: 8, massPerPort: 120, ltan: '10:30', integration: ['Sriharikota'],
     deployers: ['ISISPACE QuadPack', 'Any standard CubeSat dispenser'],
     respondBy: '2 Mar 2027', rebooking: 'No rebooking — slot is released',
-    included: ['Licensing'], addOns: ['Separation system +on request', 'Integration support +$18k'],
+    services: {
+      'Licensing': 'included',
+      'Separation system': 'on request',
+      'Integration support': '+$18k',
+    },
   },
   {
     id: 'l5', alt: 600, inc: 89.9, seller: 'Rocket Factory Augsburg', launcher: 'RFA ONE F4', site: 'SaxaVord, Shetland',
     orbit: 'Polar', altitude: '600 km', inclination: '89.9°', window: 'Q4 2026',
-    lMinus: 'L−8 weeks', delivery: '05 Sep 2026', spareMass: 240, price: '$44k / kg',
+    lMinus: 'L−8 weeks', delivery: 'Sep 2026', spareMass: 240, price: '$44k / kg',
     watchers: 2, matches: 0,
-    sellerType: 'Launcher', nation: 'DE', vehicle: 'RFA ONE', offer: 'Firm', confirmed: false,
+    sellerType: 'Launcher', nation: 'Germany', vehicle: 'RFA ONE', offer: 'Firm', confirmed: false,
     ports: 8, massPerPort: 250, ltan: '—', integration: ['SaxaVord'],
     deployers: ['Rocket Lab CSD', 'Exolaunch EXOpod', 'ISISPACE QuadPack'],
     respondBy: '30 Oct 2026', rebooking: 'One free slip within the campaign',
-    included: ['Separation system', 'Integration support'], addOns: ['Testing +$44k'],
+    services: {
+      'Separation system': 'included',
+      'Integration support': 'included',
+      'Testing': '+$44k',
+    },
   },
   {
     id: 'l6', alt: null, inc: 6, seller: 'Arianespace', launcher: 'Ariane 6 VA265', site: 'Kourou, French Guiana',
     orbit: 'GTO', altitude: '—', inclination: '6°', window: 'Q3 2027',
-    lMinus: 'L−10 weeks', delivery: '14 May 2027', spareMass: 800, price: '$37k / kg',
+    lMinus: 'L−10 weeks', delivery: 'May 2027', spareMass: 800, price: '$37k / kg',
     watchers: 0, matches: 0,
-    sellerType: 'Launcher', nation: 'FR', vehicle: 'Ariane 6', offer: 'Firm', confirmed: true,
+    sellerType: 'Launcher', nation: 'France', vehicle: 'Ariane 6', offer: 'Firm', confirmed: true,
     ports: 4, massPerPort: 800, ltan: '—', integration: ['Kourou'],
     deployers: ['ESPA Grande port', 'Clamp band'],
     respondBy: '10 Aug 2027', rebooking: 'Rebooking fee 15%',
-    included: ['Separation system', 'Delivery', 'Licensing'], addOns: ['OTV +on request'],
+    services: {
+      'Separation system': 'included',
+      'Delivery': 'included',
+      'Licensing': 'included',
+      'OTV': 'on request',
+    },
   },
   {
     id: 'l7', alt: 540, inc: 97.6, seller: 'Isar Aerospace', launcher: 'Spectrum F5', site: 'Andøya, Norway',
     orbit: 'SSO', altitude: '540 km', inclination: '97.6°', window: 'Q4 2027',
-    lMinus: 'L−6 weeks', delivery: '12 Sep 2027', spareMass: 210, price: '$45k / kg',
+    lMinus: 'L−6 weeks', delivery: 'Sep 2027', spareMass: 210, price: '$45k / kg',
     watchers: 5, matches: 1,
-    sellerType: 'Launcher', nation: 'DE', vehicle: 'Spectrum', offer: 'Firm', confirmed: false,
+    sellerType: 'Launcher', nation: 'Germany', vehicle: 'Spectrum', offer: 'Firm', confirmed: false,
     ports: 6, massPerPort: 210, ltan: '10:30', integration: ['Andøya', 'Augsburg'],
     deployers: ['ESPA Grande port', 'Rocket Lab CSD', 'Exolaunch EXOpod Nova'],
     respondBy: '1 Dec 2027', rebooking: 'One free slip to the next Spectrum flight',
-    included: ['Separation system', 'Integration support', 'Licensing'], addOns: ['Testing +$50k'],
+    services: {
+      'Separation system': 'included',
+      'Integration support': 'included',
+      'Licensing': 'included',
+      'Testing': '+$50k',
+    },
   },
   {
     id: 'l8', alt: 570, inc: 97.9, seller: 'Rocket Factory Augsburg', launcher: 'RFA ONE F6', site: 'SaxaVord, Shetland',
     orbit: 'SSO', altitude: '570 km', inclination: '97.9°', window: 'Q1 2027',
-    lMinus: 'L−8 weeks', delivery: '14 Nov 2026', spareMass: 320, price: '$42k / kg',
+    lMinus: 'L−8 weeks', delivery: 'Nov 2026', spareMass: 320, price: '$42k / kg',
     watchers: 2, matches: 2,
-    sellerType: 'Launcher', nation: 'DE', vehicle: 'RFA ONE', offer: 'Firm', confirmed: true,
+    sellerType: 'Launcher', nation: 'Germany', vehicle: 'RFA ONE', offer: 'Firm', confirmed: true,
     ports: 8, massPerPort: 320, ltan: '10:30', integration: ['SaxaVord'],
     deployers: ['ISISPACE QuadPack', 'Rocket Lab CSD', 'Exolaunch EXOpod'],
     respondBy: '18 Jan 2027', rebooking: 'One free slip within the campaign',
-    included: ['Separation system', 'Integration support'], addOns: ['Testing +$44k', 'Delivery +$10k'],
+    services: {
+      'Separation system': 'included',
+      'Integration support': 'included',
+      'Testing': '+$44k',
+      'Delivery': '+$10k',
+    },
   },
   {
     id: 'l9', alt: 480, inc: 45, seller: 'SpaceX', launcher: 'Bandwagon-6', site: 'Cape Canaveral, USA',
     orbit: 'LEO', altitude: '480 km', inclination: '45°', window: 'Q2 2028',
-    lMinus: 'L−10 weeks', delivery: '19 Feb 2028', spareMass: 900, price: '$33k / kg',
+    lMinus: 'L−10 weeks', delivery: 'Feb 2028', spareMass: 900, price: '$33k / kg',
     watchers: 0, matches: 0,
-    sellerType: 'Launcher', nation: 'US', vehicle: 'Falcon 9', offer: 'Waitlist', confirmed: false,
+    sellerType: 'Launcher', nation: 'United States', vehicle: 'Falcon 9', offer: 'Waitlist', confirmed: false,
     ports: 20, massPerPort: 900, ltan: '—', integration: ['Cape Canaveral'],
     deployers: ['ESPA Grande port', 'Motorized Lightband', 'Clamp band'],
     respondBy: '5 Apr 2028', rebooking: 'One rebooking within 12 months',
-    included: ['Separation system'], addOns: ['Testing +$60k', 'Integration support +$25k'],
+    services: {
+      'Separation system': 'included',
+      'Testing': '+$60k',
+      'Integration support': '+$25k',
+    },
   },
   {
     id: 'l10', alt: 620, inc: 90.1, seller: 'NewSpace India Limited', launcher: 'SSLV-D5', site: 'Sriharikota, India',
     orbit: 'Polar', altitude: '620 km', inclination: '90.1°', window: 'Q3 2027',
-    lMinus: 'L−6 weeks', delivery: '28 May 2027', spareMass: 150, price: 'On request',
+    lMinus: 'L−6 weeks', delivery: 'May 2027', spareMass: 150, price: 'On request',
     watchers: 1, matches: 0,
-    sellerType: 'Broker', nation: 'IN', vehicle: 'SSLV', offer: 'Waitlist', confirmed: false,
+    sellerType: 'Broker', nation: 'India', vehicle: 'SSLV', offer: 'Waitlist', confirmed: false,
     ports: 6, massPerPort: 150, ltan: '—', integration: ['Sriharikota'],
     deployers: ['ISISPACE QuadPack', 'Any standard CubeSat dispenser'],
     respondBy: '14 Apr 2027', rebooking: 'No rebooking — slot is released',
-    included: ['Licensing'], addOns: ['Separation system +on request'],
+    services: {
+      'Licensing': 'included',
+      'Separation system': 'on request',
+    },
   },
   {
     id: 'l11', alt: 525, inc: 97.5, seller: 'Exolaunch', launcher: 'Transporter-16', site: 'Vandenberg, USA',
     orbit: 'SSO', altitude: '525 km', inclination: '97.5°', window: 'Q4 2026',
-    lMinus: 'L−8 weeks', delivery: '02 Sep 2026', spareMass: 340, price: '$36k / kg',
+    lMinus: 'L−8 weeks', delivery: 'Sep 2026', spareMass: 340, price: '$36k / kg',
     watchers: 11, matches: 4,
-    sellerType: 'Broker', nation: 'DE', vehicle: 'Falcon 9', offer: 'Firm', confirmed: true,
+    sellerType: 'Broker', nation: 'Germany', vehicle: 'Falcon 9', offer: 'Firm', confirmed: true,
     ports: 24, massPerPort: 300, ltan: '10:30', integration: ['Vandenberg', 'Berlin'],
     deployers: ['Exolaunch EXOpod Nova', 'Exolaunch CarboNIX', 'ESPA Grande port'],
     respondBy: '12 Oct 2026', rebooking: 'One free move to the next Transporter',
-    included: ['Separation system', 'Integration support', 'Licensing'], addOns: ['Testing +$38k', 'Delivery +$9k'],
+    services: {
+      'Separation system': 'included',
+      'Integration support': 'included',
+      'Licensing': 'included',
+      'Testing': '+$38k',
+      'Delivery': '+$9k',
+    },
   },
   {
     id: 'l12', alt: 545, inc: 97.6, seller: 'D-Orbit', launcher: 'ION SCV-016', site: 'Kourou, French Guiana',
     orbit: 'SSO', altitude: '545 km', inclination: '97.6°', window: 'Q1 2027',
-    lMinus: 'L−10 weeks', delivery: '14 Oct 2026', spareMass: 160, price: '$52k / kg',
+    lMinus: 'L−10 weeks', delivery: 'Oct 2026', spareMass: 160, price: '$52k / kg',
     watchers: 5, matches: 2,
-    sellerType: 'Broker', nation: 'IT', vehicle: 'Vega C', offer: 'Firm', confirmed: false,
+    sellerType: 'Broker', nation: 'Italy', vehicle: 'Vega C', offer: 'Firm', confirmed: false,
     ports: 8, massPerPort: 160, ltan: '10:30', integration: ['Fino Mornasco', 'Kourou'],
     deployers: ['ISISPACE QuadPack', 'Exolaunch EXOpod', 'D-Orbit ION dispenser'],
     respondBy: '28 Nov 2026', rebooking: 'Rebooking fee 10% after L−5 months',
-    included: ['Separation system', 'Last-mile delivery', 'Integration support'], addOns: ['Testing +$41k'],
+    services: {
+      'Separation system': 'included',
+      'Delivery': 'included',
+      'OTV': 'included',
+      'Integration support': 'included',
+      'Testing': '+$41k',
+    },
   },
   {
     id: 'l13', alt: 520, inc: 97.5, seller: 'Spaceflight Inc.', launcher: 'Sherpa-LTE2', site: 'Cape Canaveral, USA',
     orbit: 'SSO', altitude: '520 km', inclination: '97.5°', window: 'Q3 2026',
-    lMinus: 'L−6 weeks', delivery: '19 Jun 2026', spareMass: 90, price: '$58k / kg',
+    lMinus: 'L−6 weeks', delivery: 'Jun 2026', spareMass: 90, price: '$58k / kg',
     watchers: 3, matches: 1,
-    sellerType: 'Broker', nation: 'US', vehicle: 'Falcon 9', offer: 'Waitlist', confirmed: true,
+    sellerType: 'Broker', nation: 'United States', vehicle: 'Falcon 9', offer: 'Waitlist', confirmed: true,
     ports: 6, massPerPort: 90, ltan: '10:30', integration: ['Seattle', 'Cape Canaveral'],
     deployers: ['Rocket Lab CSD', 'Motorized Lightband'],
     respondBy: '30 Sept 2026', rebooking: 'No rebooking — slot is released',
-    included: ['Separation system'], addOns: ['Integration support +$22k', 'Testing +$45k'],
+    services: {
+      'Separation system': 'included',
+      'Integration support': '+$22k',
+      'Testing': '+$45k',
+    },
   },
 ];
 
@@ -237,37 +310,37 @@ export const DEALS = {
       id: 'd1', subject: 'Aurora-1', counterpart: 'Spectrum F3 · Isar Aerospace',
       status: 'in procurement', phase: 'E3', lastEvent: 'QuoteSubmitted v2', lastAt: '2 days ago',
       waiting: { side: 'you', what: 'Quote v2 awaiting acceptance', clock: 'validity ends in 9 days' },
-      window: 'Q3 2026', delivery: 'Delivery 12 Jun 2026 (L−6 weeks)',
+      window: 'Q3 2026', delivery: 'Delivery Jun 2026 (L−6 weeks)',
     },
     {
       id: 'd2', subject: 'Aurora-2', counterpart: 'Spectrum F3 · Isar Aerospace',
       status: 'channel open', phase: 'E1', lastEvent: 'RfiSubmitted', lastAt: '3 days ago',
       waiting: { side: 'them', what: 'ROM owed by seller', clock: 'no clock — informal step' },
-      window: 'Q3 2026', delivery: 'Delivery 12 Jun 2026 (L−6 weeks)',
+      window: 'Q3 2026', delivery: 'Delivery Jun 2026 (L−6 weeks)',
     },
     {
       id: 'd3', subject: 'Aurora-T', counterpart: 'RFA ONE F6 · Rocket Factory Augsburg',
       status: 'NDA pending', phase: 'D3', lastEvent: 'NdaProposed', lastAt: '1 day ago',
       waiting: { side: 'you', what: 'NDA awaiting your signature', clock: 'expires in 4 business days' },
-      window: 'Q1 2028', delivery: 'Delivery 14 Nov 2027 (L−8 weeks)',
+      window: 'Q1 2028', delivery: 'Delivery Nov 2027 (L−8 weeks)',
     },
     {
       id: 'd4', subject: 'Aurora-2', counterpart: 'PSLV-C64 · NSIL',
       status: 'matched', phase: 'C', lastEvent: 'RequestCreated (quotation)', lastAt: '4 days ago',
       waiting: { side: 'them', what: 'Request awaiting response', clock: '6 business days left of 10' },
-      window: 'Q2 2027', delivery: 'Delivery 19 Feb 2027 (L−6 weeks)',
+      window: 'Q2 2027', delivery: 'Delivery Feb 2027 (L−6 weeks)',
     },
     {
       id: 'd5', subject: 'Aurora-1', counterpart: 'Vega C VV29 · Arianespace',
       status: 'matched', phase: 'B', lastEvent: 'MatchFound', lastAt: '6 days ago',
       waiting: { side: 'you', what: 'Match to accept or turn down', clock: 'nothing running' },
-      window: 'Q4 2026', delivery: 'Delivery 02 Sep 2026 (L−8 weeks)',
+      window: 'Q4 2026', delivery: 'Delivery Sep 2026 (L−8 weeks)',
     },
     {
       id: 'd6', subject: 'Aurora-0', counterpart: 'Spectrum F2 · Isar Aerospace',
       status: 'booked', phase: 'G', lastEvent: 'SatelliteBooked', lastAt: '3 weeks ago',
       waiting: { side: 'none', what: 'Nothing outstanding', clock: 'window holds' },
-      window: 'Q3 2026', delivery: 'Delivery 12 Jun 2026 (L−6 weeks)',
+      window: 'Q3 2026', delivery: 'Delivery Jun 2026 (L−6 weeks)',
     },
   ],
   sell: [
@@ -275,37 +348,37 @@ export const DEALS = {
       id: 'e1', subject: 'Spectrum F3', counterpart: 'Connectivity constellation',
       status: 'matched', phase: 'C', lastEvent: 'RequestCreated (quotation)', lastAt: '2 hours ago',
       waiting: { side: 'you', what: 'Quotation request to accept or decline', clock: '10 business days left of 10' },
-      window: 'Q3 2026', delivery: 'Delivery 12 Jun 2026 (L−6 weeks)',
+      window: 'Q3 2026', delivery: 'Delivery Jun 2026 (L−6 weeks)',
     },
     {
       id: 'e2', subject: 'Spectrum F5', counterpart: 'University research group',
       status: 'channel open', phase: 'E1', lastEvent: 'RfiSubmitted', lastAt: '1 day ago',
       waiting: { side: 'you', what: 'RFI received — ROM owed', clock: 'no clock — informal step' },
-      window: 'Q4 2027', delivery: 'Delivery 12 Sep 2027 (L−6 weeks)',
+      window: 'Q4 2027', delivery: 'Delivery Sep 2027 (L−6 weeks)',
     },
     {
       id: 'e3', subject: 'Spectrum F3', counterpart: 'Earth-observation buyer',
       status: 'in procurement', phase: 'E3', lastEvent: 'QuoteSubmitted v2', lastAt: '2 days ago',
       waiting: { side: 'them', what: 'Quote v2 with the buyer', clock: 'validity ends in 9 days' },
-      window: 'Q3 2026', delivery: 'Delivery 12 Jun 2026 (L−6 weeks)',
+      window: 'Q3 2026', delivery: 'Delivery Jun 2026 (L−6 weeks)',
     },
     {
       id: 'e4', subject: 'Spectrum F4', counterpart: 'Climate research institute',
       status: 'commercially closed', phase: 'F2', lastEvent: 'QuoteAccepted v1', lastAt: '4 days ago',
       waiting: { side: 'you', what: 'Agreement to draft (LSA + SOW)', clock: 'nothing running' },
-      window: 'Q1 2028', delivery: 'Delivery 14 Nov 2027 (L−8 weeks)',
+      window: 'Q1 2028', delivery: 'Delivery Nov 2027 (L−8 weeks)',
     },
     {
       id: 'e5', subject: 'Spectrum F3', counterpart: 'Imaging constellation',
       status: 'NDA pending', phase: 'D3', lastEvent: 'NdaSigned (them)', lastAt: '1 day ago',
       waiting: { side: 'you', what: 'NDA awaiting your signature', clock: 'expires in 4 business days' },
-      window: 'Q3 2026', delivery: 'Delivery 12 Jun 2026 (L−6 weeks)',
+      window: 'Q3 2026', delivery: 'Delivery Jun 2026 (L−6 weeks)',
     },
     {
       id: 'e6', subject: 'Spectrum F3', counterpart: 'Maritime monitoring buyer',
       status: 'booked', phase: 'G', lastEvent: 'SatelliteBooked', lastAt: '2 weeks ago',
       waiting: { side: 'none', what: 'Nothing outstanding', clock: 'window holds' },
-      window: 'Q3 2026', delivery: 'Delivery 12 Jun 2026 (L−6 weeks)',
+      window: 'Q3 2026', delivery: 'Delivery Jun 2026 (L−6 weeks)',
     },
   ],
 };
@@ -422,13 +495,16 @@ export const MISSION_ROWS = {
         },
         { id: 'b6', listing: 'Transporter-16', seller: 'Exolaunch', window: 'Q4 2026', status: 'matched', reached: 0, days: null,
           matchedOn: '24 Sept 2026', carries: ['Aurora-1', 'Aurora-2'],
+          contact: { name: 'Lena Fischer', role: 'Rideshare sales', email: 'lena@exolaunch.example' },
         },
         { id: 'b7', listing: 'ION SCV-016', seller: 'D-Orbit', window: 'Q1 2027', status: 'matched', reached: 0, days: null,
           matchedOn: '26 Sept 2026', carries: ['Aurora-T'], asked: '22 Sept 2026',
           rom: { value: '$0.58M', version: 'v1', at: '27 Sept 2026' }, pug: 'PUG rev C',
+          contact: { name: 'Giulia Renzi', role: 'Mission integration', email: 'giulia@dorbit.example' },
         },
         { id: 'b8', listing: 'Sherpa-LTE2', seller: 'Spaceflight Inc.', window: 'Q3 2026', status: 'matched', reached: 0, days: null,
           matchedOn: '19 Sept 2026', carries: ['Aurora-1'], asked: '22 Sept 2026',
+          contact: { name: 'Tom Akande', role: 'Launch programmes', email: 'tom@spaceflight.example' },
         },
         { id: 'b2', listing: 'RFA ONE F6', seller: 'Rocket Factory Augsburg', window: 'Q1 2027', status: 'NDA pending', reached: 1, detail: 'NDA expires in 4 business days', clock: 'NDA expires', days: 4,
           matchedOn: '21 Sept 2026',
@@ -503,6 +579,7 @@ export const MISSION_ROWS = {
       launches: [
         { id: 'b3', listing: 'RFA ONE F4', seller: 'Rocket Factory Augsburg', window: 'Q4 2026', status: 'matched', reached: 0, days: null,
           matchedOn: '19 Sept 2026',
+          contact: { name: 'Jonas Peil', role: 'Mission management', email: 'jonas@rfa.example' },
         },
       ],
       satellites: [
@@ -692,10 +769,10 @@ export const DEAL = {
   seller: 'Isar Aerospace',
   status: 'in procurement',
   window: 'Q3 2026',
-  delivery: '3 Nov 2026',
+  delivery: 'Nov 2026',
   deliveryWas: '27 Oct 2026',
   waiting: { side: 'you', what: 'Quote v2 awaiting your decision', clock: '9 days of validity left' },
-  summary: ['Matched', 'NDA', 'Procurement', 'Contract', 'Booked'],
+  summary: PHASES,
   reached: 2,
   // Where this deal has got to along the path, keyed by step. The path itself
   // is PROCUREMENT_PATH below: every launch walks the same seventeen steps, and
@@ -728,25 +805,106 @@ export const DEAL = {
 // work and says so, since the other side cannot see it and should not appear
 // to be waiting on it.
 export const PROCUREMENT_PATH = [
-  { label: 'Mission published', event: 'SatelliteReady', actor: 'You' },
-  { label: 'Mission matched', event: 'MatchFound', actor: 'System' },
-  { label: 'Sign mutual NDA', event: 'NdaExecuted', actor: 'Both' },
-  { label: 'Draft RFI', actor: 'You', note: 'Your draft — the seller sees nothing until it is sent' },
-  { label: 'Send RFI', event: 'RfiSubmitted', actor: 'You' },
-  { label: 'ROM received', event: 'RomSubmitted', actor: 'Seller' },
-  { label: 'Approve, reject or negotiate the ROM', event: 'RomAccepted', actor: 'You' },
-  { label: 'Draft RFQ', actor: 'You', note: 'Your draft — includes the compliance matrix' },
-  { label: 'Send RFQ', event: 'RfqSubmitted', actor: 'You' },
-  { label: 'Quote received', event: 'QuoteSubmitted', actor: 'Seller' },
-  { label: 'Approve, reject or negotiate the quote', event: 'TermProposed / TermAccepted', actor: 'You' },
-  { label: 'Request the LSA and SOW', actor: 'You' },
-  { label: 'LSA and SOW received', event: 'AgreementDrafted', actor: 'Seller' },
-  { label: 'Approve, reject or negotiate the agreement', event: 'TermProposed / TermAccepted', actor: 'Both' },
-  { label: 'LSA and SOW signature', event: 'AgreementSigned ×2 → AgreementExecuted', actor: 'Both' },
-  { label: 'Billing', actor: '—', untracked: true, note: 'No events for this in v1 of the flow — it needs a model before it can be tracked' },
-  { label: 'Launch booked', event: 'SatelliteBooked', actor: 'System' },
+  { label: 'Mission published', event: 'SatelliteReady', actor: 'You', phase: 0 },
+  { label: 'Mission matched', event: 'MatchFound', actor: 'System', phase: 0 },
+  { label: 'Sign mutual NDA', event: 'NdaExecuted', actor: 'Both', phase: 1 },
+  { label: 'Draft RFI', actor: 'You', phase: 2, note: 'Your draft — the seller sees nothing until it is sent' },
+  { label: 'Send RFI', event: 'RfiSubmitted', actor: 'You', phase: 2 },
+  { label: 'ROM received', event: 'RomSubmitted', actor: 'Seller', phase: 2 },
+  { label: 'Approve, reject or negotiate the ROM', event: 'RomAccepted', actor: 'You', phase: 2 },
+  { label: 'Draft RFQ', actor: 'You', phase: 2, note: 'Your draft — includes the compliance matrix' },
+  { label: 'Send RFQ', event: 'RfqSubmitted', actor: 'You', phase: 2 },
+  { label: 'Quote received', event: 'QuoteSubmitted', actor: 'Seller', phase: 2 },
+  { label: 'Approve, reject or negotiate the quote', event: 'TermProposed / TermAccepted', actor: 'You', phase: 2 },
+  { label: 'Request the LSA and SOW', actor: 'You', phase: 3 },
+  { label: 'LSA and SOW received', event: 'AgreementDrafted', actor: 'Seller', phase: 3 },
+  { label: 'Approve, reject or negotiate the agreement', event: 'TermProposed / TermAccepted', actor: 'Both', phase: 3 },
+  { label: 'LSA and SOW signature', event: 'AgreementSigned ×2 → AgreementExecuted', actor: 'Both', phase: 3 },
+  { label: 'Billing', actor: '—', untracked: true, phase: 3, note: 'No events for this in v1 of the flow — it needs a model before it can be tracked' },
+  { label: 'Launch booked', event: 'SatelliteBooked', actor: 'System', phase: 4 },
 ];
 
-// Which step each of the five summary phases lands on, so a launch that only
-// records "reached: 2" can still say where it is on the long path.
-export const PHASE_STEP = [1, 2, 10, 14, 16];
+// Which step each phase lands on, so a launch that only records "reached: 2"
+// can still say where it is on the long path.
+//
+// Derived from the steps rather than written out: a phase lands on its last
+// TRACKED step, so adding a step moves the landing by itself. Billing sits in
+// Contract and is untracked, which is exactly why this cannot be a hand-kept
+// list — the landing is step 14, not 15.
+export const PHASE_STEP = PHASES.map((_, at) => {
+  const last = PROCUREMENT_PATH.reduce(
+    (found, step, index) => (step.phase === at && !step.untracked ? index : found), 0);
+  return last;
+});
+
+// ── Threads ─────────────────────────────────────────────────────────────────
+//
+// The one thing on this platform that cannot be derived.
+//
+// Everything else here is a projection of events — a status, a stage, a count.
+// A message is content: somebody wrote it, and no amount of reading the record
+// reconstructs the sentence. So it is stored, and it is the only thing that is.
+//
+// Threads are per deal, not per company. Isar may be carrying Aurora-1 on
+// Spectrum F3 and quoting Aurora-T on Spectrum F5, and those are different
+// negotiations with different numbers; merging them into one conversation with
+// "Isar Aerospace" is how a price from one ends up quoted against the other.
+export const THREADS = {
+  buy: [
+    {
+      id: 't1', listing: 'Spectrum F3', seller: 'Isar Aerospace', mission: 'Boreal',
+      who: { name: 'Lena Fischer', role: 'Mission manager', email: 'l.fischer@isaraerospace.com' },
+      stage: 'In procurement', unread: 1,
+      messages: [
+        { from: 'cosmo', at: '8 May 2026, 09:14',
+          text: 'Hello — I am writing on behalf of a United Kingdom-based operator about Spectrum F3. Our mission Boreal flies Aurora-1 (68 kg) and Aurora-2 (68 kg) to 520 km at 97.45°, targeting Q3 2026 to Q4 2026. We would like to ask for a ROM for Aurora-1 and Aurora-2 and your Payload User’s Guide. Happy to sign a mutual NDA first.',
+          sent: 'Sent by Cosmo, approved by you' },
+        { from: 'them', at: '8 May 2026, 16:02',
+          text: 'Thanks for reaching out. Mutual NDA attached — once it is executed I can share the PUG and put a ROM together. Two 68 kg payloads at 520 km SSO is a straightforward fit for F3; we have 180 kg spare on that flight.' },
+        { from: 'you', at: '9 May 2026, 08:30',
+          text: 'Signed and returned. Both satellites use the ISISPACE QuadPack — can you confirm the interface before we go further?' },
+        { from: 'them', at: '11 May 2026, 10:47',
+          text: 'Confirmed, QuadPack is already qualified on F3. ROM v1 is in the portal. Integration at Andøya or Augsburg, your choice — Augsburg is easier if you are shipping from the UK.' },
+        { from: 'them', at: '30 Sept 2026, 14:20',
+          text: 'Quote v2 is up. The only change from v1 is the integration window, which moves two weeks later. Validity runs nine days.' },
+      ],
+    },
+    {
+      id: 't2', listing: 'RFA ONE F6', seller: 'Rocket Factory Augsburg', mission: 'Boreal',
+      who: { name: 'Tomas Vogel', role: 'Launch sales', email: 't.vogel@rfa.space' },
+      stage: 'Requested', unread: 1,
+      messages: [
+        { from: 'cosmo', at: '21 Sept 2026, 11:05',
+          text: 'Hello — I am writing on behalf of a United Kingdom-based operator about RFA ONE F6. Our mission Boreal flies Aurora-T (12 kg) to 550 km at 97.6°, targeting Q1 2027. We would like to ask for a ROM for Aurora-T and your Payload User’s Guide. Happy to sign a mutual NDA first.',
+          sent: 'Sent by Cosmo, approved by you' },
+        { from: 'them', at: '22 Sept 2026, 09:41',
+          text: 'Happy to. NDA is out for signature with our legal team today. One thing worth flagging early: F6 is currently manifested Q1 2027 but the campaign has slipped once already. If your window is hard, say so now and I will tell you honestly whether to wait for F7.' },
+      ],
+    },
+    {
+      id: 't3', listing: 'ION SCV-016', seller: 'D-Orbit', mission: 'Boreal',
+      who: { name: 'Giulia Moretti', role: 'Mission access', email: 'g.moretti@dorbit.space' },
+      stage: 'Documents', unread: 1,
+      messages: [
+        { from: 'cosmo', at: '26 Sept 2026, 15:30',
+          text: 'Hello — I am writing on behalf of a United Kingdom-based operator about ION SCV-016. Our mission Boreal flies Aurora-T (12 kg) to 550 km at 97.6°, targeting Q1 2027. We would like to ask for a ROM for Aurora-T and your Payload User’s Guide. Happy to sign a mutual NDA first.',
+          sent: 'Sent by Cosmo, approved by you' },
+        { from: 'them', at: '27 Sept 2026, 08:12',
+          text: 'NDA executed, PUG and ROM are both in the portal. Worth reading the ROM against the others you are holding: our $52k/kg includes delivery to Kourou and the OTV phasing, which most of the rideshare prices you will be comparing do not. Like for like we are usually cheaper, not dearer.' },
+      ],
+    },
+  ],
+  sell: [
+    {
+      id: 's1', listing: 'Spectrum F3', seller: 'Boreal', mission: 'Spectrum F3',
+      who: { name: 'Genna Ng', role: 'Mission manager', email: 'genna@aetherspace.tech' },
+      stage: 'In procurement', unread: 0,
+      messages: [
+        { from: 'them', at: '8 May 2026, 09:14',
+          text: 'Enquiry about Spectrum F3 — two 68 kg payloads to 520 km SSO, Q3 2026 to Q4 2026.' },
+        { from: 'you', at: '8 May 2026, 16:02',
+          text: 'Mutual NDA attached. 180 kg spare on that flight, so the fit is straightforward.' },
+      ],
+    },
+  ],
+};

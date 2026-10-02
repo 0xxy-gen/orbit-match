@@ -19,6 +19,7 @@ import {
   PROPULSION, READINESS, COUNTRIES, ORBIT_TYPES, orbitType, WINDOW_YEARS,
   quarterParts, quarterValue, labelFor, valueFor, maskClock, grouped, DEPLOYER_MODES,
 } from './mission-options.js';
+import { SATELLITE } from './satellite-table.js';
 import { MISSION_ROWS } from './demo-data.js';
 import { validateMission } from './validate.js';
 import { assistant, toggleAssistant, openAssistant } from './assistant.js';
@@ -260,7 +261,11 @@ function satelliteBlock(satellite, index) {
   fold.setAttribute('aria-expanded', String(shown));
   const caret = el('span', 'sat-caret');
   caret.innerHTML = '<svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5 8 6l-4 3.5"/></svg>';
-  fold.append(caret, el('span', `sat-block-n${satellite.name ? ' named' : ''}`,
+  // the same mark the mission page carries, imported rather than copied: this
+  // file already keeps its own fold, and two drawings of one object drift
+  const mark = el('span', 'sat-mark');
+  mark.innerHTML = SATELLITE;
+  fold.append(caret, mark, el('span', `sat-block-n${satellite.name ? ' named' : ''}`,
     satellite.name || `Satellite ${index + 1}`));
   if (!shown) {
     const line = summarise(satellite);

@@ -87,6 +87,35 @@ const EDITORS = {
   deployerMass: { type: 'supply' },
 };
 
+// A satellite, as a solid silhouette on the diagonal.
+//
+// The first drawing was a flat engineering elevation — body between two panels,
+// all outline, perfectly level. Technically right and visually dead: at 20px it
+// read as a dumbbell, because a level bar of three rectangles is a shape the
+// eye has no reason to call a satellite.
+//
+// Three things make this one read instead. Solid, because a 1px outline falls
+// apart at this size while a filled shape holds. Tilted, because the diagonal
+// gives it a direction and asymmetry is most of what makes a small mark
+// memorable. And the dish, which is the part that actually names it.
+//
+// The dish carries that alone now, so it is drawn large and clear of the body.
+// The signal arcs did the naming before and have gone; without them the
+// silhouette has to do the work, which is why the panels sit a full unit and a
+// half off the body — at a glance you should count three parts, not one bar.
+export const SATELLITE = `
+  <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
+    <g fill="currentColor">
+      <g transform="rotate(-40 11.6 11.2)">
+        <rect x="0.5" y="8.3" width="6.7" height="5.6" rx=".85"/>
+        <rect x="16" y="8.3" width="6.7" height="5.6" rx=".85"/>
+        <rect x="8.8" y="6.8" width="5.6" height="8.6" rx="1.3"/>
+        <rect x="10.5" y="4.1" width="2.2" height="2.8" rx=".8"/>
+      </g>
+      <path d="M13.5 14.3 19.3 16.5 15.9 20.4Z"/>
+    </g>
+  </svg>`
+
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -412,7 +441,19 @@ export function satelliteTable(list, columns = SAT_COLUMNS, { edit = false, onRe
     for (const [key] of columns) {
       const td = el('td', key === 'name' ? 'sat-name' : null);
       td.dataset.col = key;
+
+      // The mark goes on the name cell in both modes of this table. Editing a
+      // mission uses satelliteEditor rather than this one, and that carries the
+      // mark on its fold heading for the same reason: a row does not change
+      // species because the record is open for changes.
+      if (key === 'name') {
+        const mark = el('span', 'sat-mark');
+        mark.innerHTML = SATELLITE;
+        td.append(mark);
+      }
+
       if (edit) td.append(editor(satellite, key));
+      else if (key === 'name') td.append(document.createTextNode(cell(satellite, key) || '—'));
       else td.textContent = cell(satellite, key) || '—';
       row.append(td);
     }
@@ -488,7 +529,11 @@ export function satelliteEditor(list, { onRemove, onDuplicate, onRedraw } = {}) 
       fold.setAttribute('aria-expanded', String(shown));
       const caret = el('span', 'sat-caret');
       caret.innerHTML = '<svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5 8 6l-4 3.5"/></svg>';
-      fold.append(caret, el('span', `sat-block-n${satellite.name ? ' named' : ''}`,
+      // the same mark the read-only table carries, so a row does not change
+      // species when the record is opened for changes
+      const mark = el('span', 'sat-mark');
+      mark.innerHTML = SATELLITE;
+      fold.append(caret, mark, el('span', `sat-block-n${satellite.name ? ' named' : ''}`,
         satellite.name || `Satellite ${index + 1}`));
       if (!shown) {
         const line = [satellite.form, satellite.mass && `${satellite.mass} kg`, satellite.orbit, windowSpan(satellite)]

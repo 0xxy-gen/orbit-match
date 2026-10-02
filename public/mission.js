@@ -9,10 +9,10 @@
 // stands, and it is one track per launch, never one per mission: a mission of
 // three satellites can be on two launches at different points, and a single
 // track would have to lie about one of them.
-import { MISSION_ROWS, LISTINGS } from './demo-data.js';
+import { MISSION_ROWS, LISTINGS, SERVICES } from './demo-data.js';
 import { COUNTRIES, EXPORT_CONTROL, RIDE_PREFERENCES, FLEXIBILITY, quarterRank } from './mission-options.js';
 import { satelliteTable, satelliteEditor } from './satellite-table.js';
-import { assistant, toggleAssistant, STAR } from './assistant.js';
+import { assistant, toggleAssistant, STAR, PORTRAIT } from './assistant.js';
 import { accountMenu, currentUser } from './account-menu.js';
 import { themeToggle } from './theme.js';
 import { mentionPicker, withMentions, mentioned } from './mention.js';
@@ -84,6 +84,7 @@ function log(entry) {
 // What it does is re-run matching, because the mission's terms have changed
 // underneath every match already made against them.
 let confirming = false;
+let landed = false;   // a deep link is followed once, not on every render
 
 function save_() {
   if (!changed()) return;
@@ -451,6 +452,36 @@ function overview() {
     wrap.append(editing ? factControl('sellerNotes') : el('p', 'mission-notes', row.sellerNotes));
   }
 
+  // Launch configurations, in the record rather than in a tab of their own.
+  //
+  // They were a tab, and a tab made them feel like a separate exercise you
+  // might or might not get round to. They are not: a configuration is a thing
+  // you are telling sellers, exactly like the notes above it, and it belongs in
+  // the same breath. Sitting under "Notes to sellers" is the honest placement —
+  // both are what the other side gets to see.
+  //
+  // Not while editing. The record is open for changes and a grouping you can
+  // drag is not one of the fields being changed.
+  // Shown on every mission, including the ones with a single satellite.
+  //
+  // Hiding it below two satellites made the page a different shape on Lyra and
+  // Halcyon than on the rest, and an absent section cannot explain itself —
+  // "where did launch configurations go" is a worse question than one line
+  // saying there is nothing here to group. The panel already had that line
+  // written; the guard meant it could never render.
+  if (view === 'buy' && !editing) {
+    const added = (row.configurations ?? []).filter(option => option.added).length;
+    // No rule above it. The band marks a change of kind, which is why Activity
+    // has one — but configurations are the same kind of thing as the notes
+    // above them: the record, and the part of it sellers read. A rule here
+    // would say "new section" while the placement says "same breath".
+    const heading = el('h3', 'panel-heading');
+    heading.id = 'configurations';
+    heading.append(document.createTextNode('Launch configurations'), el('span', 'shared-badge', 'Shared'));
+    if (added) heading.append(el('span', 'tab-count', String(added)));
+    wrap.append(heading, configuration());
+  }
+
   // The log lives here rather than in a tab of its own. Four tabs to read one
   // mission is three too many, and what has happened to a mission belongs
   // beside what the mission is — not one click away from it.
@@ -514,7 +545,6 @@ function fillsFor(on) {
 // value — "~$4.90M" against "$6.53M" — rather than in a column heading that
 // could only say one of them at a time. The tilde is the whole marker: a word
 // beside it said the same thing a third time and read like a typo.
-const OFFER_COLUMNS = ['Listing', 'Vehicle', 'Company', 'Carrying', 'Window', 'Matched on', ''];
 
 // The one date format this app writes: 28 Sept 2026, matching the fixture.
 // toDateString gives "Sep 28 2026", which sat next to "22 Sept 2026" and read
@@ -551,55 +581,96 @@ function carriedBy(launch) {
   return row.satellites.filter(satellite => satellite.launch === launch.id);
 }
 
-function offerRow(launch) {
-  const on = carriedBy(launch);
-  const listing = LISTINGS.find(each => each.launcher === launch.listing);
-  const fills = fillsFor(on);
+// Everything on one row.
+//
+// The listing spec is about thirty fields and they are all here as columns,
+// because the point of a table is reading down one: "Testing" says +$41k,
+// +$50k, +$38k, not offered — which no amount of per-row detail can do.
+//
+// It is wide and it scrolls sideways. That trade is deliberate: a panel folded
+// under each row hides exactly the comparison you came for.
+const MATCH_GROUPS = [
+  ['', ['Listing', 'Vehicle']],
+  ['Seller', ['Company', 'Nationality']],
+  ['Match', ['Carrying', 'Matched on']],
+  ['Flight', ['Status', 'Offer', 'Launch window', 'Launch site', 'Integration site']],
+  ['Orbit', ['Type', 'Altitude', 'Inclination', 'LTAN']],
+  ['Capacity', ['Ports', 'Mass per port', 'Spare', 'Deployers']],
+  ['Commercial', ['Cost per kg', 'Respond by', 'Estimated payload delivery', 'Rebooking']],
+  ['', ['Additional services']],
+  ['', ['']],
+];
 
-  const line = el('tr', 'offer-row');
+// Two tiers of heading: thirty columns need saying which family each is in.
+function matchHead() {
+  const head = el('thead');
 
-  const cell = (className, top, under) => {
-    const td = el('td', className);
-    td.append(el('span', 'offer-top', top));
-    if (under) td.append(el('span', 'offer-under', under));
-    return td;
-  };
-
-  // A column each, not one cell holding three things.
-  //
-  // Reading down a column compares like with like: "Falcon 9" sits under
-  // "Spectrum" and the difference is free. As "Falcon 9 · SpaceX" against
-  // "Spectrum · Isar Aerospace" the eye has to take each string apart before it
-  // can compare anything.
-  const first = cell('offer-name', launch.listing);
-
-  // No Fills column. Which configuration slot an offer fills is decided by
-  // which satellites ride on it, so when the two agree the column restates
-  // Carrying. The case worth knowing is the opposite one — an offer that fits
-  // none of the shapes you stated — and that is a flag, because "—" could not
-  // tell it apart from having stated no shapes at all.
-  if (!fills.length && (row.configurations ?? []).some(option => option.added)) {
-    first.append(el('span', 'offer-flag', 'outside your configurations'));
+  const top = el('tr', 'wide-groups');
+  for (const [group, columns] of MATCH_GROUPS) {
+    const th = el('th', group ? 'wide-group' : null, group);
+    th.colSpan = columns.length;
+    top.append(th);
   }
-  line.append(first);
+  head.append(top);
 
-  line.append(cell(null, listing?.vehicle ?? '—'));
-  line.append(cell(null, launch.seller));
-
-  line.append(cell(null, on.map(satellite => satellite.name).join(', ') || '—'));
-  line.append(cell(null, listing?.window ?? launch.window));
-
-  // When the match was found, and how long it has sat. One from May and one
-  // from last week are different things even when everything else matches.
-  line.append(cell(null, launch.matchedOn ?? '—',
-    launch.matchedOn ? sinceMatch(launch.matchedOn) : null));
-
-  line.append(offerActs(launch));
-
-  return line;
+  const row = el('tr');
+  for (const [, columns] of MATCH_GROUPS) {
+    for (const label of columns) row.append(el('th', null, label));
+  }
+  head.append(row);
+  return head;
 }
 
-// The buttons for wherever this deal has got to.
+function matchCells(launch) {
+  const listing = LISTINGS.find(each => each.launcher === launch.listing) ?? {};
+  const on = carriedBy(launch);
+
+  // One column, two lines: what is in the price, then what is not.
+  //
+  // Seven columns read down beautifully and were mostly dashes. The comparison
+  // that matters survives the fold — D-Orbit's line says delivery and OTV are
+  // included where nobody else's does.
+  const included = SERVICES.filter(name => listing.services?.[name] === 'included');
+  const extra = SERVICES
+    .filter(name => listing.services?.[name] && listing.services[name] !== 'included')
+    .map(name => `${name.toLowerCase()} ${listing.services[name]}`);
+
+  return [
+    [launch.listing, 'wide-name'],
+    [listing.vehicle ?? '—'],
+
+    [launch.seller],
+    [listing.nation ?? '—'],
+
+    [on.map(satellite => satellite.name).join(', ') || '—'],
+    [launch.matchedOn ?? '—'],
+
+    [listing.confirmed === undefined ? '—' : listing.confirmed ? 'Confirmed' : 'Tentative'],
+    [listing.offer ?? '—'],
+    [listing.window ?? launch.window],
+    [listing.site ?? '—'],
+    [listing.integration?.join(' or ') ?? '—'],
+
+    [listing.orbit ?? '—'],
+    [listing.altitude ?? '—'],
+    [listing.inclination ?? '—'],
+    [listing.ltan ?? '—'],
+
+    [String(listing.ports ?? '—')],
+    [listing.massPerPort ? `${listing.massPerPort} kg` : '—'],
+    [listing.spareMass ? `${listing.spareMass} kg` : '—'],
+    [listing.deployers?.join(', ') ?? '—'],
+
+    [listing.price ?? '—'],
+    [listing.respondBy ?? '—'],
+    [listing.delivery ? `${listing.delivery} (${listing.lMinus})` : '—'],
+    [listing.rebooking ?? '—'],
+
+    [included.length ? included.join(', ') : 'Nothing included',
+     'wide-services', extra.length ? extra.join(', ') : 'nothing else offered'],
+  ];
+}
+
 function offerActs(launch, as = 'td') {
   const td = el(as, 'offer-acts');
 
@@ -657,24 +728,437 @@ function offerActs(launch, as = 'td') {
   return td;
 }
 
+
+// ── Cosmo, brokering ────────────────────────────────────────────────────────
+//
+// The match is the easy part. The hard part is that somebody has to write the
+// first message to a stranger, and in this market that stranger is a launch
+// company you are about to ask for several million dollars of their manifest.
+// That blank box is where the funnel dies.
+//
+// So Cosmo writes it, and Cosmo asks. Four rules, all of them load-bearing:
+//
+//   Evidence, not adjectives.  Every line of the pitch is a field already in
+//   the record, so Cosmo cannot flatter a listing into looking better than it
+//   is. "320 kg spare against your 12 kg" survives being checked; "great fit"
+//   does not.
+//
+//   You consent before they are told.  Nobody is exposed to a match they did
+//   not agree to, on either side. Until you press send, the seller does not
+//   know you looked.
+//
+//   Cosmo drafts, you approve, Cosmo sends.  Never auto-send. An agent that
+//   emails a counterparty technical detail unseen is an export-control problem,
+//   not a convenience — Lyra is flagged ITAR, and that is the ordinary case
+//   here, not the exception. Approval can be one click; it cannot be none.
+//
+//   It carries its own off switch.  Anything that proposes things unprompted
+//   has to say, on the same screen, how to make it stop.
+
+let pitching = null;   // the listing whose draft is open, if any
+const passed = new Set();   // "not this one", for this session
+
+// Why this one, in facts you can check.
+//
+// Each line names a field and a number. Nothing here is Cosmo's opinion, which
+// is the point: the reasons are re-derived on every render, so a listing that
+// stops fitting stops being argued for.
+function reasonsFor(launch) {
+  const listing = LISTINGS.find(each => each.launcher === launch.listing) ?? {};
+  const on = carriedBy(launch);
+  const out = [];
+
+  // A satellite states a window as a range, so "their window" means the
+  // listing lands inside it — not that the two strings happen to match.
+  const at = quarterRank(listing.window);
+  if (on.length && at) {
+    const inside = on.filter(satellite => {
+      const from = quarterRank(satellite.windowFrom);
+      const to = quarterRank(satellite.windowTo) ?? from;
+      return from && at >= from && at <= to;
+    });
+    if (inside.length) {
+      out.push(`Flies ${sentenceList(inside.map(satellite => satellite.name))} in ${listing.window} — inside their window.`);
+    }
+  }
+
+  // Mass is held as a string on the record, because the field it comes from is
+  // a text input. Adding it up without saying so gives you '06868'.
+  const riding = on.reduce((total, satellite) => total + (Number(satellite.mass) || 0), 0);
+  if (listing.spareMass && riding) {
+    out.push(`${listing.spareMass} kg spare against your ${riding} kg.`);
+  }
+
+  const fills = fillsFor(on);
+  if (fills.length) {
+    out.push(`Matches configuration ${fills[0].option.letter}.`);
+  }
+
+  const included = SERVICES.filter(name => listing.services?.[name] === 'included');
+  if (included.length) {
+    out.push(`${sentenceList(included)} included in the price.`);
+  }
+
+  if (listing.price) out.push(`${listing.price}, before anything is negotiated.`);
+
+  return out;
+}
+
+// The one worth asking about: unasked, not passed on, and with the most to say
+// for itself. One card, never a ranked list — a list is a second comparison
+// table, and there is already a very good one underneath.
+function worthAsking(all) {
+  return all
+    .filter(launch => stageOf(launch) === 'Matched' && !passed.has(launch.id))
+    .map(launch => ({ launch, why: reasonsFor(launch) }))
+    .sort((a, b) => b.why.length - a.why.length)[0];
+}
+
+// What is missing, which is what there is to ask for.
+//
+// Derived from the blank cells in the row rather than a fixed list, so the ask
+// is about this listing: no point asking for an LTAN that is already published.
+function asksFor(launch) {
+  const listing = LISTINGS.find(each => each.launcher === launch.listing) ?? {};
+  const on = carriedBy(launch);
+  const riding = sentenceList(on.map(satellite => satellite.name)) || 'these satellites';
+
+  // `short` rather than lowercasing the label: "A ROM" does not become "a rom",
+  // and the sentence it goes into wants "a ROM for Aurora-1 and Aurora-2"
+  // regardless of how the checkbox above it reads.
+  const asks = [
+    { label: 'A ROM for this configuration', short: `a ROM for ${riding}`,
+      why: `nothing is quoted for ${riding} yet`, on: true },
+    { label: "The Payload User's Guide", short: "your Payload User's Guide",
+      why: 'deployer compatibility is not published', on: true },
+  ];
+
+  if (!listing.ltan) {
+    asks.push({ label: 'Their LTAN', short: 'your LTAN', why: 'the listing does not state one', on: true });
+  }
+  if (!listing.delivery) {
+    asks.push({ label: 'A payload delivery date', short: 'a payload delivery date',
+      why: 'the listing does not state one', on: true });
+  }
+  if (row.exportControl && row.exportControl !== 'None') {
+    asks.push({ label: 'How they handle export control', short: 'how you handle export control',
+      why: `${row.name} is flagged ${row.exportControl.toLowerCase()}`, on: true });
+  }
+  asks.push({ label: 'Insurance terms', short: 'your insurance terms',
+    why: 'not usually published, and you have not asked before', on: false });
+  return asks;
+}
+
+// The message, written from the record.
+//
+// Returned as parts rather than a string so the sourced values can be marked in
+// the preview: you should be able to see at a glance which words came out of
+// your mission and which ones Cosmo wrote.
+const windowOf = satellite => {
+  if (!satellite?.windowFrom) return 'our window';
+  return satellite.windowTo && satellite.windowTo !== satellite.windowFrom
+    ? `${satellite.windowFrom} to ${satellite.windowTo}`
+    : satellite.windowFrom;
+};
+
+function draftTo(launch, asks) {
+  const on = carriedBy(launch);
+  const part = (text, sourced = false) => ({ text, sourced });
+  return [
+    [part('Hello — I am writing on behalf of '), part(row.country ? `a ${row.country}-based operator` : 'an operator', true),
+     part(' about '), part(launch.listing, true), part('.')],
+    [part('Our mission '), part(row.name, true), part(' flies '),
+     part(sentenceList(on.map(satellite => `${satellite.name} (${satellite.mass} kg)`)) || 'our satellites', true),
+     part(' to '), part(`${on[0]?.altitude ?? '—'} km`, true), part(' at '),
+     part(`${on[0]?.inclination ?? '—'}°`, true), part(', targeting '),
+     part(windowOf(on[0]), true), part('.')],
+    [part('We would like to ask for '),
+     part(sentenceList(asks.map(ask => ask.short)) || 'more detail', true),
+     part('. Happy to sign a mutual NDA first.')],
+  ];
+}
+
+function introCard(all) {
+  const best = worthAsking(all);
+  if (!best) return null;
+  const { launch, why } = best;
+
+  const card = el('section', 'cosmo-card');
+
+  const head = el('div', 'cosmo-card-head');
+  const face = el('span', 'cosmo-card-face');
+  face.innerHTML = PORTRAIT;
+  head.append(face, el('span', 'cosmo-card-who', 'Cosmo'), el('span', 'ask-ai', 'AI'));
+  card.append(head);
+
+  card.append(el('p', 'cosmo-card-lede', `Worth asking: ${launch.listing}`),
+    el('p', 'cosmo-card-sub', `${launch.seller} · matched ${sinceMatch(launch.matchedOn)}`));
+
+  if (why.length) {
+    const list = el('ul', 'cosmo-why');
+    for (const line of why) list.append(el('li', null, line));
+    card.append(list);
+  }
+
+  if (pitching === launch.id) {
+    card.append(draftPanel(launch));
+  } else {
+    const tools = el('div', 'cosmo-card-tools');
+
+    const go = el('button', 'primary small', 'Ask them');
+    go.type = 'button';
+    go.addEventListener('click', () => { pitching = launch.id; render(); });
+
+    const no = el('button', 'ghost small', 'Not this one');
+    no.type = 'button';
+    no.addEventListener('click', () => { passed.add(launch.id); render(); });
+
+    tools.append(go, no);
+    card.append(tools);
+
+    // The whole proposition, and it belongs on screen rather than in a tooltip.
+    card.append(el('p', 'cosmo-card-quiet',
+      `${launch.seller} will not know you looked unless you send this.`));
+  }
+
+  const off = el('button', 'cosmo-off', `Stop suggesting matches for ${row.name}`);
+  off.type = 'button';
+  off.addEventListener('click', () => {
+    for (const launch_ of all) passed.add(launch_.id);
+    render();
+    say('Suggestions off for this session only. Nothing is saved in this prototype.');
+  });
+  card.append(off);
+
+  return card;
+}
+
+// Opens in place, under the card, rather than in a dialog — the same rule the
+// record editor follows. A dialog would hide the table you are deciding from.
+function draftPanel(launch) {
+  const wrap = el('div', 'cosmo-draft');
+  const chosen = new Set();
+
+  const asks = asksFor(launch);
+  asks.forEach((ask, at) => { if (ask.on) chosen.add(at); });
+
+  const picked = () => asks.filter((_, at) => chosen.has(at));
+
+  wrap.append(el('h3', 'cosmo-draft-title', `What I would ask ${launch.seller} for`));
+
+  const list = el('div', 'cosmo-asks');
+  asks.forEach((ask, at) => {
+    const line = el('label', 'cosmo-ask');
+    const box = el('input');
+    box.type = 'checkbox';
+    box.checked = chosen.has(at);
+    box.addEventListener('change', () => {
+      if (box.checked) chosen.add(at); else chosen.delete(at);
+      paintDraft();
+    });
+    const said = el('span', 'cosmo-ask-said');
+    said.append(el('span', 'cosmo-ask-what', ask.label), el('span', 'cosmo-ask-why', ask.why));
+    line.append(box, said);
+    list.append(line);
+  });
+  wrap.append(list);
+
+  wrap.append(el('h3', 'cosmo-draft-title', 'And this is what I would send'));
+
+  const preview = el('div', 'cosmo-note');
+  let editing = false;
+  let edited = null;
+  const area = el('textarea', 'cosmo-note-edit');
+
+  const asText = () => draftTo(launch, picked())
+    .map(line => line.map(part => part.text).join(''))
+    .join('\n\n');
+
+  function paintDraft() {
+    if (editing) return;
+    preview.replaceChildren();
+    for (const line of draftTo(launch, picked())) {
+      const para = el('p');
+      for (const part of line) {
+        para.append(part.sourced ? el('span', 'cosmo-sourced', part.text) : document.createTextNode(part.text));
+      }
+      preview.append(para);
+    }
+  }
+  paintDraft();
+
+  wrap.append(preview, area);
+  area.hidden = true;
+
+  // Tinting the sourced words is the honesty: you can see at a glance which of
+  // this came out of your own record and which of it Cosmo wrote.
+  wrap.append(el('p', 'cosmo-key', 'Tinted words are read from this mission. The rest is mine.'));
+
+  const tools = el('div', 'cosmo-draft-tools');
+
+  const edit = el('button', 'ghost small', 'Edit wording');
+  edit.type = 'button';
+  edit.addEventListener('click', () => {
+    editing = !editing;
+    if (editing) {
+      area.value = edited ?? asText();
+      area.rows = Math.max(6, area.value.split('\n').length + 2);
+      edit.textContent = 'Done editing';
+    } else {
+      edited = area.value;
+      edit.textContent = 'Edit wording';
+      paintDraft();
+    }
+    preview.hidden = editing;
+    area.hidden = !editing;
+  });
+
+  const send = el('button', 'primary small', `Send to ${launch.seller}`);
+  send.type = 'button';
+  send.addEventListener('click', () => {
+    launch.asked = today();
+    pitching = null;
+    log({ event: 'NdaProposed', text: `Mutual NDA proposed with ${launch.seller} on ${launch.listing}.` });
+    log({
+      event: 'RfiSubmitted',
+      text: `Cosmo asked ${launch.seller} for ${sentenceList(picked().map(ask => ask.short))} on ${launch.listing}.`,
+    });
+    render();
+    say('Nothing was sent. This prototype has no outbox.');
+  });
+
+  const back = el('button', 'ghost small', 'Cancel');
+  back.type = 'button';
+  back.addEventListener('click', () => { pitching = null; render(); });
+
+  tools.append(send, edit, back);
+  wrap.append(tools);
+
+  wrap.append(el('p', 'cosmo-card-quiet',
+    `I will not send anything you have not read. — Cosmo`));
+
+  return wrap;
+}
+
+
+// ── Matches ─────────────────────────────────────────────────────────────────
+//
 // Managing matches, before a deal exists.
 //
 // A match is not an offer. Nobody has quoted anything, nobody has committed,
-// and the seller may not know you exist. Three states live in here and the flat
-// version could only say "matched" for all of them:
+// and the seller may not know you exist — so the one question this tab has to
+// answer, beside the comparison, is where each match has got to and whether
+// anything is stuck.
 //
-//   matched    a listing fits. Neither side has done anything.
-//   requested  you have asked. The ball is with them.
-//   accepted   both have said yes — which is where a match stops being a match
-//              and becomes a deal, and leaves this table.
+// That question asks for a kanban board and does not get one. A board's whole
+// affordance is that you drag the card, and nobody here can: a match moves when
+// an event fires, half of them from the other side. A board you cannot drag is
+// a list grouped by stage, laid out sideways — and laying it out sideways costs
+// the one thing this table is for, which is reading down a column.
 //
-// Mutual acceptance is the boundary because it is where the substance changes:
-// contacts are exchanged, the NDA opens, documents start to exist.
+// So the stage is carried three other ways, and the rows stay in one table:
+//   1. under the listing name, in the column that never scrolls away
+//   2. a strip of counts across the top, each one a filter
+//   3. a grouping toggle, which is the board's information without its shape
+
+// Four stages, and they stop at the point a match stops being a match.
+//
+// Anything past a quote has become a deal and leaves this tab, which is why
+// there is no Quoted or Booked column to sit empty for ever.
+const MATCH_STAGES = [
+  ['Matched', 'A listing fits. Neither side has done anything yet.'],
+  ['Requested', 'You have asked for the ROM and the PUG. The ball is with them.'],
+  ['Documents', 'The NDA is executed and their numbers are readable.'],
+  ['In procurement', 'This one has become a deal. It is here for context only.'],
+];
+
+// Derived, never stored. Two matches in the same stage got there by different
+// routes — one from the fixture, one from a request made in this session — and
+// storing a stage on the record would make those drift apart the first time
+// someone clicked Request.
+function stageOf(launch) {
+  if (['in procurement', 'commercially closed', 'booked'].includes(launch.status)) return 'In procurement';
+  if (launch.rom) return 'Documents';
+  if (launch.asked || launch.status === 'NDA pending' || launch.status === 'channel open') return 'Requested';
+  return 'Matched';
+}
+
+let stageOnly = null;      // the stage being filtered to, if any
+let stageGrouped = false;  // rows gathered under stage headings
+
+// Counts across the top, each a filter.
+//
+// Empty stages are shown and not hidden: a zero is the most useful number here.
+// "Requested 0" is the sentence "you have matched five launches and asked none
+// of them for anything", which is the whole reason to look at this strip.
+function stageStrip(all) {
+  const strip = el('div', 'stage-strip');
+
+  const chip = (label, count, on, onClick) => {
+    const button = el('button', `stage-chip${on ? ' on' : ''}${count ? '' : ' none'}`);
+    button.type = 'button';
+    button.append(el('span', 'stage-chip-name', label), el('span', 'stage-chip-count', String(count)));
+    button.setAttribute('aria-pressed', String(on));
+    if (count) button.addEventListener('click', onClick);
+    else button.disabled = true;
+    return button;
+  };
+
+  strip.append(chip('All', all.length, stageOnly === null, () => { stageOnly = null; render(); }));
+  for (const [name, note] of MATCH_STAGES) {
+    const count = all.filter(launch => stageOf(launch) === name).length;
+    const button = chip(name, count, stageOnly === name, () => {
+      stageOnly = stageOnly === name ? null : name;
+      render();
+    });
+    button.title = note;
+    strip.append(button);
+  }
+
+  const group = el('button', `stage-group-toggle${stageGrouped ? ' on' : ''}`,
+    stageGrouped ? 'Ungroup' : 'Group by stage');
+  group.type = 'button';
+  group.setAttribute('aria-pressed', String(stageGrouped));
+  group.addEventListener('click', () => { stageGrouped = !stageGrouped; render(); });
+  strip.append(group);
+
+  return strip;
+}
+
+// The same row, with the stage tucked under the listing name.
+//
+// Under the name rather than in a column of its own because that column is the
+// sticky one: scroll out to Rebooking, three thousand pixels right, and the
+// stage is still there. A stage column would have scrolled away exactly when
+// you were furthest from remembering which row you were on.
+function offerRow(launch, { showStage = true } = {}) {
+  const line = el('tr', 'offer-row');
+  const on = carriedBy(launch);
+  const fills = fillsFor(on);
+  const stage = stageOf(launch);
+
+  matchCells(launch).forEach(([text, className, under], at) => {
+    const td = el('td', className, under ? undefined : text);
+    if (under) {
+      td.append(el('span', 'wide-top', text), el('span', 'wide-under', under));
+    }
+    if (at === 0) {
+      // redundant with the heading above it when the rows are grouped
+      if (showStage) td.append(el('span', `stage-pill ${stage.replace(/\s+/g, '-').toLowerCase()}`, stage));
+      if (!fills.length && (row.configurations ?? []).some(option => option.added)) {
+        td.append(el('span', 'offer-flag', 'outside your configurations'));
+      }
+    }
+    line.append(td);
+  });
+
+  line.append(offerActs(launch));
+  return line;
+}
+
 function launches() {
   const wrap = el('div', 'mission-panel');
 
-  // Deals with a clock first, then matches nobody has answered, newest first.
-  // The status column says which is which, so they share one table.
   const offeredAt = launch => {
     const parsed = Date.parse(String(launch.matchedOn ?? '').replace('Sept', 'Sep'));
     return Number.isFinite(parsed) ? parsed : 0;
@@ -684,37 +1168,78 @@ function launches() {
     return clock !== 0 ? clock : offeredAt(b) - offeredAt(a);
   });
 
-  if (all.length) {
-    const grid = el('table', 'offer-table');
-    const head = el('thead');
-    const headRow = el('tr');
-    for (const label of OFFER_COLUMNS) headRow.append(el('th', null, label));
-    head.append(headRow);
-    grid.append(head);
-
-    const body = el('tbody');
-    for (const launch of all) body.append(offerRow(launch));
-    grid.append(body);
-
-    const scroll = el('div', 'sat-scroll');
-    scroll.append(grid);
-    wrap.append(scroll);
+  if (!all.length) {
+    wrap.append(el('p', 'empty', row.status === 'Published'
+      ? `No matches yet. Nothing published fits ${row.name}'s orbit and window.`
+      : `${row.name} is a draft, so it is not being matched. Publish it to start.`));
+    return wrap;
   }
 
-  const loose = row.satellites.filter(satellite => !satellite.launch);
+  // A filter that survives switching missions would silently hide rows on a
+  // mission you have not looked at, so it is cleared when the stage is not here.
+  if (stageOnly && !all.some(launch => stageOf(launch) === stageOnly)) stageOnly = null;
+
+  const pitch = introCard(all);
+  if (pitch) wrap.append(pitch);
+
+  wrap.append(stageStrip(all));
+
+  const shown = stageOnly ? all.filter(launch => stageOf(launch) === stageOnly) : all;
+
+  const grid = el('table', 'offer-table wide-table');
+  grid.append(matchHead());
+  const body = el('tbody');
+
+  if (stageGrouped) {
+    // Every stage that has rows, in pipeline order rather than sorted order:
+    // the point of grouping is to see the shape of the run, and a run has a
+    // direction.
+    for (const [name, note] of MATCH_STAGES) {
+      const here = shown.filter(launch => stageOf(launch) === name);
+      if (!here.length) continue;
+
+      const head = el('tr', 'stage-head');
+      const cell = el('td', 'stage-head-cell');
+      cell.colSpan = MATCH_GROUPS.reduce((total, [, columns]) => total + columns.length, 0);
+      const inner = el('div', 'stage-head-inner');
+      inner.append(
+        el('span', 'stage-head-name', name),
+        el('span', 'stage-head-count', String(here.length)),
+        el('span', 'stage-head-note', note),
+      );
+      cell.append(inner);
+      head.append(cell);
+      body.append(head);
+
+      for (const launch of here) body.append(offerRow(launch, { showStage: false }));
+    }
+  } else {
+    for (const launch of shown) body.append(offerRow(launch));
+  }
+
+  grid.append(body);
+
+  const scroll = el('div', 'sat-scroll');
+  scroll.append(grid);
+  wrap.append(scroll);
+
+  if (stageOnly) {
+    wrap.append(el('p', 'stage-filtered',
+      `Showing ${shown.length} of ${all.length} — ${stageOnly.toLowerCase()} only.`));
+  }
+
+  const loose = row.satellites.filter(satellite =>
+    !all.some(launch => carriedBy(launch).some(each => each.name === satellite.name)));
   if (loose.length) {
     const group = el('section', 'launch-group loose');
     group.append(
-      el('div', 'launch-name', 'Not yet on a launch'),
+      el('div', 'launch-name', 'No match yet'),
       el('p', 'launch-meta',
-        `${loose.map(satellite => satellite.name).join(', ')} — still matching against published listings.`),
+        `${sentenceList(loose.map(satellite => satellite.name))} — nothing published fits them so far.`),
     );
     wrap.append(group);
   }
 
-  if (!wrap.childElementCount) {
-    wrap.append(el('p', 'empty', 'Nothing has been requested against this mission yet.'));
-  }
   return wrap;
 }
 
@@ -918,6 +1443,59 @@ function updates() {
 //     well the mass adds up.
 //   · delivery is the *latest* ready-to-ship date. A batch leaves when its
 //     slowest member is finished, not its fastest.
+// A rocket with its payloads drawn inside it.
+//
+// The outline is the fairing and the blocks are what rides in it, so two blocks
+// in one rocket is "these two fly together" — seen rather than read. That is the
+// single fact a configuration exists to state, and it was being carried only by
+// the word "and" in a line of text.
+//
+// Outlined rather than solid with bands across it. Bands were the first attempt
+// and they vanished: a 1px line in the card colour, over a body five pixels
+// wide, is invisible at any size this row can afford, so a one-satellite launch
+// and a two-satellite launch drew identically. An outline gives the payloads
+// the card background to sit on, and then they read.
+//
+// Drawn at 19x25, which is larger than an icon wants to be and is the point:
+// at 13px the payload blocks were there and indistinguishable, so a one- and a
+// two-satellite launch rendered the same. The row is two lines of text tall
+// either way, so the height is free; only about six pixels of card width is
+// being spent, and it buys the one thing the glyph is for.
+function rocketGlyph(count) {
+  // Every block the same size, stacked up from the floor of the bay.
+  //
+  // They used to divide the bay between them, so one satellite drew as a single
+  // tall block and looked larger than either half of a pair — which is backwards
+  // twice over: a satellite is a satellite, and a fuller rocket should look
+  // fuller, not more finely divided. Fixed blocks fix both, and the space left
+  // above them reads as the room still going spare.
+  const floor = 12.2;
+  const tall = 1.65;
+  const gap = 0.42;
+  const many = Math.min(count, 3);
+
+  const load = [];
+  for (let at = 0; at < many; at += 1) {
+    const y = floor - (at + 1) * tall - at * gap;
+    load.push(`<rect x="4.95" y="${y.toFixed(2)}" width="4.1" height="${tall}" rx=".3"/>`);
+  }
+  // a fourth and beyond would be a stack of hairlines, so the count says it
+  const over = count > 3 ? '<path d="M7 13.1v.9" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>' : '';
+
+  return `
+    <svg viewBox="0 0 14 18" width="19" height="25" aria-hidden="true">
+      <path d="M7 1.4c2 1.9 2.95 3.9 2.95 5.5v6.1h-5.9V6.9C4.05 5.3 5 3.3 7 1.4Z"
+            fill="none" stroke="currentColor" stroke-width="1.05" stroke-linejoin="round"/>
+      <g fill="currentColor">
+        ${load.join('')}
+        <path d="M3.3 9.9 1.5 12.2v2.3l1.8-1.5Z"/>
+        <path d="M10.7 9.9l1.8 2.3v2.3l-1.8-1.5Z"/>
+        <path d="M5.8 14.1h2.4L7 16.6Z"/>
+      </g>
+      ${over}
+    </svg>`;
+}
+
 function batchFacts(names) {
   const on = row.satellites.filter(satellite => names.includes(satellite.name));
 
@@ -941,6 +1519,10 @@ function batchFacts(names) {
 
   return {
     count: on.length,
+    // Orbit is near enough constant inside one mission, so printing it on every
+    // launch of every configuration is a column of the same string. It earns
+    // its line only when the group does not agree.
+    mixed: altitudes.length > 1 || orbits.length > 1,
     mass: Number(mass.toFixed(1)),
     window: clash ? 'No shared window' : (from === to ? from : `${from} – ${to}`),
     clash,
@@ -1238,11 +1820,30 @@ function configuration() {
   // explains the tab. At the bottom it was below every card, so the more
   // options Cosmo had the further you had to scroll to do the thing that does
   // not involve Cosmo at all.
-  const intro = el('div', 'config-intro');
-  intro.append(el('p', 'panel-note',
-    'Ways these satellites could be grouped onto launches. Add the ones you would accept: matching looks for launches that fit any of them. No launch is chosen here and nothing is sent.'));
+  const ranked = options.filter(option => option.added).length > 1;
 
-  const add = el('button', 'ghost group-own', '+ Group them yourself');
+  const intro = el('div', 'config-intro');
+  // What adding actually does, and what not adding does — because the second
+  // was only ever said on the empty state, and someone with one configuration
+  // already added could not tell whether this step was required or optional.
+  // It is optional: adding narrows the search rather than switching it on.
+  intro.append(el('p', 'panel-note',
+    'Ways these satellites could be grouped onto launches. '
+    + 'Add the ones you would accept and matching looks only for launches that fit them. '
+    + 'Add none and matching still runs, taking any grouping as acceptable. '
+    + (ranked ? 'Yours sit left to right in order of preference — drag a card or use the arrows. ' : '')
+    + "Tinted cards are Cosmo's — nothing is chosen for you, and nothing is shared until you add it."));
+
+  // "New", not "Add". Add is already the verb on Cosmo's cards, where it means
+  // take that existing shape into your list; this one builds one that does not
+  // exist yet. Two meanings for one word, six inches apart, is how people end
+  // up pressing the wrong thing.
+  //
+  // It was "Group them yourself", which worked while Cosmo's suggestions sat in
+  // a box of their own — "yourself" was the contrast. The box has gone and the
+  // contrast is carried by the tint and the star on each card, so the word was
+  // answering a question nobody was still asking.
+  const add = el('button', 'ghost group-own', '+ New configuration');
   add.type = 'button';
   add.addEventListener('click', () => {
     // everything on one launch to begin with: the commonest starting point, and
@@ -1320,7 +1921,7 @@ function configuration() {
   const letter = option => `Configuration ${option.letter ?? '?'}`;
 
   const draw = option => {
-    const card = el('section', `config${option.needs ? ' conditional' : ''}${option.dismissed ? ' dismissed' : ''}`);
+    const card = el('section', `config${option.added ? '' : option.from === 'Cosmo' ? ' from-cosmo' : ''}${option.needs ? ' conditional' : ''}${option.dismissed ? ' dismissed' : ''}`);
 
     const head = el('div', 'config-head');
 
@@ -1332,11 +1933,27 @@ function configuration() {
 
     name.append(el('span', 'config-title', option.added ? letter(option) : shape));
 
+    // Where it came from, on the card. It used to be said once by the box these
+    // sat in; out in the open row with your own shapes, each one has to carry
+    // it. The tint says it at a glance and the star says it in words.
+    if (!option.added && option.from === 'Cosmo') {
+      const from = el('span', 'config-from');
+      const star = el('span', 'config-from-star');
+      star.innerHTML = STAR(11);
+      from.append(star, el('span', null, option.needs ? 'Cosmo · if something moves' : 'Cosmo'));
+      name.append(from);
+    }
+
     // Once it is yours the heading is the letter, so the shape moves underneath
     // it. On a suggestion the shape is already the heading and there is nothing
     // left to say here.
     titles.append(name);
-    if (option.added) titles.append(el('p', 'config-meta', shape));
+    if (option.added) {
+      // "2 launches, and the last satellite is ready in August" is what you
+      // need to know about a configuration before opening it.
+      const ready = option.batches.map(names => batchFacts(names).ship).filter(Boolean).at(-1);
+      titles.append(el('p', 'config-meta', ready ? `${shape} · ready by ${ready}` : shape));
+    }
 
     const acts = el('div', 'config-acts');
     if (option.added) {
@@ -1410,62 +2027,53 @@ function configuration() {
     card.append(head);
     }
 
-    // Launch first, then the satellites on it.
+    // One row per launch, and only what a launch adds.
     //
-    // One flat grid rather than a row element per satellite, so the launch cell
-    // can span the rows beneath it. Repeating "Launch 1" down the column was
-    // the grouping stated once per satellite when it is a property of the
-    // launch, and a merged cell draws the grouping instead of spelling it out.
+    // This was a row per satellite restating orbit, inclination, altitude,
+    // LTAN, window, ship date, mass and envelope — every one of which the
+    // satellites table states already, now that configurations live on the same
+    // page as it. Said twice on one screen is not thoroughness, it is noise,
+    // and it buried the only thing a configuration is actually for.
     //
-    // The summary line under each group has gone with it: every number on it
-    // was already on the rows above or in the card heading. What was not
-    // duplicated — how many listings could take the launch — moves into the
-    // merged cell, where it belongs to the launch it describes.
-    const table = el('div', 'config-table');
-    const th = text => el('span', 'config-th', text);
-    table.append(
-      th('Launch'), th('Satellite'),
-      th('Orbit type'), th('Inclination (°)'), th('Altitude (km)'), th('LTAN'),
-      th('Launch window'), th('Ready to ship'), th('Mass (kg)'), th('L×W×H (mm)'),
-    );
+    // What survives is what you cannot read off that table, because it is the
+    // result of the grouping rather than a property of a satellite: who flies
+    // together, what they weigh together, the orbit they must share, the window
+    // where their windows overlap, and the date the last of them is ready. Add
+    // 68 and 68 and intersect two quarters by eye and you get the same answers;
+    // the point is that you should not have to.
+    const table = el('div', 'config-legs');
 
     let broken = false;
     option.batches.forEach((names, group) => {
       const facts = batchFacts(names);
       if (facts.clash) broken = true;
-      const merged = el('div', `config-group${facts.clash ? ' clash' : ''}`);
-      merged.style.setProperty('--span', String(names.length));
-      merged.append(
-        el('span', 'config-group-name', `Launch ${group + 1}`),
-        // the one number that belongs to the launch rather than to a satellite
-        el('span', 'config-group-mass', `${facts.mass} kg total`),
-      );
-      table.append(merged);
 
-      for (const who of names) {
-        const satellite = row.satellites.find(each => each.name === who) ?? {};
-        const window = [...new Set([satellite.windowFrom, satellite.windowTo].filter(Boolean))];
-        const cell = (className, label, text) => {
-          const node = el('span', `config-td ${className}`, text);
-          node.dataset.label = label;
-          return node;
-        };
-        // Split out rather than "SSO 520 km": inclination and LTAN decide as
-        // much about what can carry a satellite as the altitude does, and they
-        // are the same columns the satellites table on Overview uses, so the
-        // two read the same way.
-        table.append(
-          cell('config-sat', 'Satellite', who),
-          cell('config-orbit', 'Orbit type', satellite.orbit || '—'),
-          cell('config-inc num', 'Inclination (°)', satellite.inclination || '—'),
-          cell('config-alt num', 'Altitude (km)', satellite.altitude || '—'),
-          cell('config-ltan', 'LTAN', satellite.ltan || '—'),
-          cell('config-window', 'Launch window', window.length ? window.join(' – ') : '—'),
-          cell('config-ship', 'Ready to ship', satellite.shipBy || '—'),
-          cell('config-mass num', 'Mass (kg)', satellite.mass || '—'),
-          cell('config-dims num', 'L×W×H (mm)', satellite.dimensions || '—'),
-        );
-      }
+      const leg = el('div', `config-leg${facts.clash ? ' clash' : ''}`);
+
+      // A rocket and a number rather than the words "Launch 1". At five cards to
+      // a row that label was wider than the fact it labelled — but the two
+      // marks here are not interchangeable and both stay: the rocket says what
+      // kind of row this is, which a bare number never did, and the number says
+      // which one, which three identical rockets never could. Notes and offers
+      // both refer to "Launch 2", so the identifier has to survive.
+      const mark = el('span', 'config-leg-n');
+      const rocket = el('span', 'config-leg-rocket');
+      rocket.innerHTML = rocketGlyph(names.length);
+      mark.append(rocket, el('span', 'config-leg-no', String(group + 1)));
+      mark.title = `Launch ${group + 1} — ${names.length} satellite${names.length === 1 ? '' : 's'}`;
+      leg.append(mark);
+
+      const said = el('div', 'config-leg-said');
+      said.append(el('p', 'config-leg-who', sentenceList(names)));
+
+      // Mass and window: the two that decide, and the two that are results of
+      // the grouping rather than properties of a satellite. Orbit joins them
+      // only when the group disagrees about it, which is when it matters.
+      const says = [`${facts.mass} kg`, facts.window, facts.mixed ? facts.orbit : null].filter(Boolean);
+      said.append(el('p', `config-leg-says${facts.clash ? ' clash' : ''}`, says.join(' · ')));
+
+      leg.append(said);
+      table.append(leg);
     });
     card.append(table);
 
@@ -1486,20 +2094,36 @@ function configuration() {
         area.setAttribute('aria-label', `Note on ${letter(option)}`);
         mentionPicker(area);
 
-        const tools = el('div', 'log-tools');
-        const cancel = el('button', 'ghost', 'Cancel');
-        cancel.type = 'button';
-        cancel.addEventListener('click', () => { noting = null; render(); });
-        const keep = el('button', 'submit compact', 'Save note');
-        keep.type = 'button';
-        keep.addEventListener('click', () => {
+        // Quiet, because of what this is.
+        //
+        // A filled accent button made the loudest control in the section the
+        // least consequential action on the page — a private aside to your own
+        // team — while "Make this change", which rewrites a satellite's orbit
+        // and window, sits there as a ghost. Weight should follow stakes.
+        //
+        // Keyboard first, buttons as the visible fallback: Enter saves, Escape
+        // backs out, which is the rule everything else on this page follows.
+        const save = () => {
           const written = area.value.trim();
           if (written) option.note = written;
           else delete option.note;
           noting = null;
           render();
+        };
+
+        area.addEventListener('keydown', event => {
+          if (event.key === 'Escape') { event.preventDefault(); noting = null; render(); }
+          if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); save(); }
         });
-        tools.append(cancel, keep);
+
+        const tools = el('div', 'log-tools note-tools');
+        const keep = el('button', 'link-button note-save', 'Save');
+        keep.type = 'button';
+        keep.addEventListener('click', save);
+        const cancel = el('button', 'link-button note-cancel', 'Cancel');
+        cancel.type = 'button';
+        cancel.addEventListener('click', () => { noting = null; render(); });
+        tools.append(keep, cancel);
         note.append(area, tools);
         card.append(note);
       } else if (option.note) {
@@ -1581,98 +2205,27 @@ function configuration() {
     return card;
   };
 
-  // Cosmo's suggestions sit inside their own box, under the star.
+  // One row, every candidate shape.
   //
-  // Everything on this tab looks alike, so without a boundary a suggestion and
-  // a grouping you made yourself read as the same kind of thing. The box says
-  // where these came from once, at the top, instead of repeating it on every
-  // card.
+  // Your own groupings and Cosmo's used to be two sections with a box around
+  // the second, which made them read as different kinds of thing. They are not:
+  // they are all shapes this mission could take, and the job is choosing
+  // between them. Two sections meant comparing across a heading and a scroll.
+  //
+  // What the box used to say, the card now says: a suggestion carries Cosmo's
+  // tint and Cosmo's name. Rank is safe to mix in because it is printed as a
+  // number on the strip, not implied by position — so an unranked card sitting
+  // after a ranked one takes nothing away from it.
   const mine = options.filter(option => option.added);
   const cosmo = list => list.filter(option =>
     option.from === 'Cosmo' && !option.added && !option.dismissed);
+  const suggested = [...cosmo(ready), ...cosmo(conditional)];
 
-  if (mine.length) {
-    // Order is preference, first is favourite.
-    //
-    // Draggable, but never only draggable: a pointer gesture cannot be done
-    // from a keyboard, on a touch screen it fights with scrolling, and it
-    // leaves no trace of what it did. The arrows are the real control and the
-    // drag is the shortcut, so both move the same list.
-    // What the order means, before the list rather than after it. It used to be
-    // a hint underneath, so you read three cards and only then found out they
-    // were ranked.
-    if (mine.length > 1) {
-      const says = el('div', 'rank-head');
-      says.append(
-        el('h4', 'cosmo-box-sub', 'In order of preference'),
-        el('p', 'panel-note',
-          'Drag a configuration, or use the arrows. If more than one works, sellers see which you would rather have.'),
-      );
-      wrap.append(says);
-    }
+  const required = options.find(option =>
+    option.added && !option.from && option.batches.length === 1
+    && option.batches[0].length === row.satellites.length);
 
-    const list = el('div', 'config-rank');
-    mine.forEach((option, at) => {
-      const card = draw(option);
-      card.draggable = true;
-      card.dataset.at = String(at);
-
-      card.addEventListener('dragstart', event => {
-        dragging = at;
-        event.dataTransfer.effectAllowed = 'move';
-        card.classList.add('lifted');
-      });
-      card.addEventListener('dragend', () => { dragging = null; card.classList.remove('lifted'); });
-      card.addEventListener('dragover', event => {
-        if (dragging === null || dragging === at) return;
-        event.preventDefault();
-        card.classList.add(dragging < at ? 'under' : 'over');
-      });
-      card.addEventListener('dragleave', () => card.classList.remove('over', 'under'));
-      card.addEventListener('drop', event => {
-        event.preventDefault();
-        card.classList.remove('over', 'under');
-        if (dragging === null || dragging === at) return;
-        move(mine[dragging], at - dragging);
-      });
-
-      // The rank, and the two buttons that are the accessible way to change it
-      const rank = el('div', 'config-rank-tools');
-      if (mine.length > 1) {
-        // the conventional "this row moves" mark, so the card does not rely on
-        // a sentence to say it is draggable
-        const grip = el('span', 'config-grip');
-        grip.innerHTML = `
-          <svg viewBox="0 0 10 16" width="10" height="16" aria-hidden="true" fill="currentColor">
-            <circle cx="2" cy="3" r="1.15"/><circle cx="8" cy="3" r="1.15"/>
-            <circle cx="2" cy="8" r="1.15"/><circle cx="8" cy="8" r="1.15"/>
-            <circle cx="2" cy="13" r="1.15"/><circle cx="8" cy="13" r="1.15"/>
-          </svg>`;
-        rank.append(grip);
-      }
-      rank.append(el('span', 'config-rank-n', String(at + 1)));
-      const up = el('button', 'config-rank-btn', '↑');
-      up.type = 'button';
-      up.title = 'Prefer this more';
-      up.setAttribute('aria-label', `Move ${letter(option)} up`);
-      up.disabled = at === 0;
-      up.addEventListener('click', () => move(option, -1));
-      const down = el('button', 'config-rank-btn', '↓');
-      down.type = 'button';
-      down.title = 'Prefer this less';
-      down.setAttribute('aria-label', `Move ${letter(option)} down`);
-      down.disabled = at === mine.length - 1;
-      down.addEventListener('click', () => move(option, 1));
-      rank.append(up, down);
-      card.prepend(rank);
-
-      list.append(card);
-    });
-    wrap.append(list);
-
-  } else {
-    // Only offer Cosmo as a way forward when Cosmo has actually put something
-    // on the page. Pointing at a box that is not there reads as a bug.
+  if (!mine.length) {
     // A notice, not a question.
     //
     // This was a gate at publish, then a choice between two answers here. Both
@@ -1682,63 +2235,119 @@ function configuration() {
     const notice = el('p', 'config-notice');
     notice.append(
       el('span', 'config-notice-mark', '!'),
-      document.createTextNode(`Set launch configuration preferences for ${row.name} if you want sellers to see how you would group these satellites. Without any, they will assume every grouping is acceptable.`),
+      document.createTextNode(`Nothing added yet, so sellers will not see a preference for ${row.name}. Add one if you would rather they knew how you want these grouped.`),
     );
     wrap.append(notice);
   }
 
-  const suggested = [...cosmo(ready), ...cosmo(conditional)];
+  const list = el('div', 'config-rank');
 
-  // The box is always here once a mission can be grouped at all.
+  mine.forEach((option, at) => {
+    const card = draw(option);
+    card.draggable = true;
+    card.dataset.at = String(at);
+
+    card.addEventListener('dragstart', event => {
+      dragging = at;
+      event.dataTransfer.effectAllowed = 'move';
+      card.classList.add('lifted');
+    });
+    card.addEventListener('dragend', () => { dragging = null; card.classList.remove('lifted'); });
+    card.addEventListener('dragover', event => {
+      if (dragging === null || dragging === at) return;
+      event.preventDefault();
+      card.classList.add(dragging < at ? 'under' : 'over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('over', 'under'));
+    card.addEventListener('drop', event => {
+      event.preventDefault();
+      card.classList.remove('over', 'under');
+      if (dragging === null || dragging === at) return;
+      move(mine[dragging], at - dragging);
+    });
+
+    // The rank, and the two buttons that are the accessible way to change it.
+    //
+    // Draggable, but never only draggable: a pointer gesture cannot be done
+    // from a keyboard, on a touch screen it fights with scrolling, and it
+    // leaves no trace of what it did. The arrows are the real control and the
+    // drag is the shortcut, so both move the same list.
+    const rank = el('div', 'config-rank-tools');
+
+    // Regroup and Remove ride up here rather than sitting under the title. At
+    // this width they wrapped to a row of their own, which cost every card a
+    // line to say nothing.
+    const acts = card.querySelector('.config-acts');
+
+    if (mine.length > 1) {
+      const grip = el('span', 'config-grip');
+      grip.innerHTML = `
+        <svg viewBox="0 0 10 16" width="10" height="16" aria-hidden="true" fill="currentColor">
+          <circle cx="2" cy="3" r="1.15"/><circle cx="8" cy="3" r="1.15"/>
+          <circle cx="2" cy="8" r="1.15"/><circle cx="8" cy="8" r="1.15"/>
+          <circle cx="2" cy="13" r="1.15"/><circle cx="8" cy="13" r="1.15"/>
+        </svg>`;
+      rank.append(grip);
+      rank.append(el('span', 'config-rank-n', String(at + 1)));
+      const up = el('button', 'config-rank-btn', '←');
+      up.type = 'button';
+      up.title = 'Prefer this more';
+      up.setAttribute('aria-label', `Move ${letter(option)} up`);
+      up.disabled = at === 0;
+      up.addEventListener('click', () => move(option, -1));
+      const down = el('button', 'config-rank-btn', '→');
+      down.type = 'button';
+      down.title = 'Prefer this less';
+      down.setAttribute('aria-label', `Move ${letter(option)} down`);
+      down.disabled = at === mine.length - 1;
+      down.addEventListener('click', () => move(option, 1));
+      rank.append(up, down);
+    }
+
+    if (acts) rank.append(acts);
+    card.prepend(rank);
+    list.append(card);
+  });
+
+  // Every card gets the same top strip, so the buttons line up across the row.
   //
-  // It used to vanish when Cosmo had nothing to offer, which reads as Cosmo
-  // being broken rather than Cosmo having nothing to say. An absent panel
-  // cannot explain itself, so it stays and gives the reason instead.
-  const required = options.find(option =>
-    option.added && !option.from && option.batches.length === 1
-    && option.batches[0].length === row.satellites.length);
+  // Yours carries the rank and its arrows on the left; Cosmo's carries the star
+  // and what it is. Both put the actions on the right, at the same height, so
+  // Dismiss sits where Remove sits and the eye does not have to go looking.
+  const topStrip = card => {
+    const strip = el('div', 'config-rank-tools plain');
+    const from = card.querySelector('.config-from');
+    if (from) strip.append(from);
+    const acts = card.querySelector('.config-acts');
+    if (acts) strip.append(acts);
+    if (strip.childElementCount) card.prepend(strip);
+    return card;
+  };
 
-  {
-    const box = el('section', 'cosmo-box');
+  for (const option of suggested) list.append(topStrip(draw(option)));
 
-    const head = el('div', 'cosmo-box-head');
-    const mark = el('span', 'cosmo-box-star');
-    mark.innerHTML = STAR(15);
-    head.append(mark, el('h3', 'cosmo-box-title', "Cosmo's suggestions"));
-    box.append(head, el('p', 'cosmo-box-note',
-      'Shapes Cosmo thinks would work, from the windows, orbits and masses you entered. Nothing here is chosen for you.'));
+  const turnedDown = options.filter(option => option.dismissed);
+  if (showDismissed) for (const option of turnedDown) list.append(topStrip(draw(option)));
 
-    if (!suggested.length) {
-      const anyFromCosmo = options.some(option => option.from === 'Cosmo');
-      const turnedDown = options.filter(option => option.dismissed).length;
-      box.append(el('p', 'empty',
-        turnedDown ? `Nothing left to consider. ${turnedDown === 1 ? 'One is' : `${turnedDown} are`} dismissed below.`
-          : anyFromCosmo ? 'You have taken all of them.'
-          : required ? `Nothing to suggest. ${row.name} requires every satellite on one launch, so there is only one shape it can take.`
-          : 'Nothing to suggest yet. Cosmo proposes groupings once the satellites have windows, orbits and masses to work from.'));
-    }
+  if (list.childElementCount) wrap.append(list);
 
-    for (const option of cosmo(ready)) box.append(draw(option));
+  // Why the row has nothing of Cosmo's in it. An absent suggestion cannot
+  // explain itself, so the reason is given rather than left to be guessed at.
+  if (!suggested.length) {
+    const anyFromCosmo = options.some(option => option.from === 'Cosmo');
+    wrap.append(el('p', 'empty',
+      turnedDown.length ? `Nothing left for Cosmo to suggest. ${turnedDown.length === 1 ? 'One is' : `${turnedDown.length} are`} dismissed.`
+        : anyFromCosmo ? 'You have taken all of Cosmo\u2019s suggestions.'
+        : required ? `Nothing for Cosmo to suggest. ${row.name} requires every satellite on one launch, so there is only one shape it can take.`
+        : 'Nothing for Cosmo to suggest yet. Proposals appear once the satellites have windows, orbits and masses to work from.'));
+  }
 
-    // folded away at the foot of the box, with a count and a way back in
-    const turnedDown = options.filter(option => option.dismissed);
-    if (turnedDown.length) {
-      const toggle = el('button', 'link-button cosmo-dismissed',
-        `${turnedDown.length} dismissed${showDismissed ? '' : ' · show'}`);
-      toggle.type = 'button';
-      toggle.addEventListener('click', () => { showDismissed = !showDismissed; render(); });
-      box.append(toggle);
-      if (showDismissed) for (const option of turnedDown) box.append(draw(option));
-    }
-
-    if (cosmo(conditional).length) {
-      box.append(el('h4', 'cosmo-box-sub', 'Possible if something moves'));
-      box.append(el('p', 'cosmo-box-note',
-        `These do not work as the mission stands. Cosmo raises them because it can flex on ${[...flexes].join(' and ').toLowerCase()}.`));
-      for (const option of cosmo(conditional)) box.append(draw(option));
-    }
-
-    wrap.append(box);
+  if (turnedDown.length) {
+    const toggle = el('button', 'link-button cosmo-dismissed',
+      `${turnedDown.length} dismissed${showDismissed ? ' · hide' : ' · show'}`);
+    toggle.type = 'button';
+    toggle.addEventListener('click', () => { showDismissed = !showDismissed; render(); });
+    wrap.append(toggle);
   }
 
 
@@ -1957,9 +2566,6 @@ function render() {
   const panels = view === 'buy' && !editing
     ? [
       ['overview', 'Overview', overview],
-      // Counts what you have added, not what Cosmo has offered: the tab should
-      // report your commitments, the same as Procurement reports real launches.
-      ['configuration', 'Launch Configurations', configuration, (row.configurations ?? []).filter(option => option.added).length],
       ['matches', 'Matches', launches, (row.launches ?? []).length],
     ]
     : [['overview', 'Overview', overview]];
@@ -1967,8 +2573,10 @@ function render() {
   // ?tab=satellites was a real tab until the merge; send those links to where
   // the satellites went rather than dropping them on a default.
   if (tab === 'satellites') tab = 'overview';
+  // and configurations have joined it, under Notes to sellers
+  if (tab === 'configuration') tab = 'overview';
   // every name this tab has had, so old links still land
-  for (const was of ['launches', 'procurement', 'procurement2', 'offers', 'offers2']) {
+  for (const was of ['launches', 'procurement', 'procurement2', 'offers', 'offers2', 'matches2']) {
     if (tab === was) tab = 'matches';
   }
   if (tab === 'updates') tab = 'overview';
@@ -1996,6 +2604,15 @@ function render() {
   canvas.append(bar);
 
   canvas.append(panels.find(([key]) => key === tab)[2]());
+
+  // The browser resolved the hash before any of this existed, so landing on a
+  // deep link is this script's job. Once only — re-rendering on every keystroke
+  // should not drag the page back up.
+  if (location.hash && !landed) {
+    landed = true;
+    document.getElementById(location.hash.slice(1))
+      ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
 
   document.getElementById('dash-link').href = `/home.html?view=${view}`;
   document.getElementById('missions-link').href = `/missions.html?view=${view}`;

@@ -11,7 +11,7 @@
 // pretending to be a milestone. Billing has no events in v1 of the flow, so it
 // says so instead of sitting there for ever incomplete.
 import { DEAL } from './demo-data.js';
-import { stepsFor, stepList } from './procurement-path.js';
+import { stepsFor, phasePath, livePhase } from './procurement-path.js';
 import { assistant, toggleAssistant, openAssistant } from './assistant.js';
 import { accountMenu } from './account-menu.js';
 import { themeToggle } from './theme.js';
@@ -44,6 +44,10 @@ function summaryTrack(deal) {
   });
   return wrap;
 }
+
+// Which phases are expanded. Null until the first render, because the answer
+// is "the one you are in" and that is not known until the steps are worked out.
+let open = null;
 
 function render() {
   const deal = DEAL;
@@ -88,9 +92,21 @@ function render() {
   card.append(summaryTrack(deal));
   canvas.append(card);
 
+  // Seventeen steps, folded into the five phases the track above already names,
+  // with the one you are in open. The road is still whole — four ticked rows you
+  // can open — but the detail is where you actually are.
+  const steps = stepsFor(deal.reached, deal.marks);
+  if (open === null) open = new Set([livePhase(steps)]);
+
   const list = el('section', 'steps');
   list.append(el('h2', 'steps-title', 'The whole path'));
-  list.append(stepList(stepsFor(deal.reached, deal.marks)));
+  list.append(phasePath(steps, {
+    open,
+    onOpen: at => {
+      if (open.has(at)) open.delete(at); else open.add(at);
+      render();
+    },
+  }));
   canvas.append(list);
 
   document.getElementById('dash-link').href = `/home.html?view=${view}`;

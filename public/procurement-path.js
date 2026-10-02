@@ -5,7 +5,7 @@
 // PROCUREMENT_PATH in the fixture; a deal supplies only its own progress, and
 // the state of each step is worked out from how far the launch has reached
 // rather than stored per step.
-import { PROCUREMENT_PATH, PHASE_STEP } from './demo-data.js';
+import { PROCUREMENT_PATH, PHASE_STEP, PHASES } from './demo-data.js';
 
 const el = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -98,3 +98,85 @@ export function stepWindow(steps, { earlier, later, onEarlier, onLater }) {
 
   return list;
 }
+
+// ── the path, folded into its phases ────────────────────────────────────────
+//
+// Seventeen steps shown at once is a wall, and a wall is read as "this will
+// take for ever" rather than "here is the whole road". Windowing it to three
+// was worse: it answered where you are and hid how far there is to go, which is
+// the question someone about to commit millions actually has.
+//
+// Phases answer both. Four completed phases collapse to four ticked rows you
+// can still open; the one you are in is open by default and shows every step in
+// it. The road stays legible end to end, and the detail is where you are.
+//
+// No percentage. "Form completion 100%" is a vanity metric — the share of
+// fields filled is not progress towards a booked launch. "3 of 8 steps done" is
+// a real count of real things, so that is what it says.
+
+const stateOf = (steps, at) => {
+  const mine = steps.filter(step => step.phase === at);
+  if (mine.some(step => step.state === 'current')) return 'current';
+  return mine.every(step => step.state === 'done' || step.state === 'untracked') ? 'done' : 'next';
+};
+
+// What a phase says about itself on the right, which depends on where it is.
+function phaseMeta(steps, at, state) {
+  const mine = steps.filter(step => step.phase === at);
+  const tracked = mine.filter(step => !step.untracked);
+
+  if (state === 'done') {
+    const landed = steps[PHASE_STEP[at]];
+    return landed?.at ? `Done · ${landed.at}` : 'Done';
+  }
+  if (state === 'current') {
+    const done = tracked.filter(step => step.state === 'done').length;
+    return `In progress · ${done} of ${tracked.length} done`;
+  }
+  return 'Not started';
+}
+
+export function phasePath(steps, { open, onOpen }) {
+  const wrap = el('div', 'phase-path');
+
+  PHASES.forEach((name, at) => {
+    const mine = steps
+      .map((step, index) => ({ step, index }))
+      .filter(({ step }) => step.phase === at);
+    if (!mine.length) return;
+
+    const state = stateOf(steps, at);
+    const showing = open.has(at);
+
+    const section = el('section', `phase ${state}${showing ? ' open' : ''}`);
+
+    const head = el('button', 'phase-head');
+    head.type = 'button';
+    head.setAttribute('aria-expanded', String(showing));
+    head.addEventListener('click', () => onOpen(at));
+
+    const mark = el('span', 'phase-mark', state === 'done' ? '✓' : '');
+    head.append(mark, el('span', 'phase-name', name));
+    head.append(el('span', 'phase-meta', phaseMeta(steps, at, state)));
+    head.append(el('span', 'phase-count', `${mine.length} step${mine.length === 1 ? '' : 's'}`));
+    head.append(el('span', 'phase-chevron', showing ? '⌃' : '⌄'));
+    section.append(head);
+
+    if (showing) {
+      const list = el('ol', 'step-list');
+      // numbered against the whole path, not the phase: step 11 of seventeen is
+      // the number people quote to each other, and restarting at 1 in every
+      // phase would invent a second numbering nobody uses.
+      for (const { step, index } of mine) list.append(stepRow(step, index));
+      section.append(list);
+    }
+
+    wrap.append(section);
+  });
+
+  return wrap;
+}
+
+// Which phase to open when the page loads: the one you are in.
+export const livePhase = steps =>
+  steps.find(step => step.state === 'current')?.phase ?? PHASES.length - 1;

@@ -1083,7 +1083,20 @@ body.app-page > .site-foot { flex: none; }
 .ghost:hover { background: var(--raised); border-color: var(--field-hover); }
 .ghost:disabled { color: var(--text-4); cursor: default; background: transparent; border-color: var(--line); }
 
-.empty { grid-column: 1 / -1; margin: 0; padding: 32px; border: 1px dashed var(--line-strong); border-radius: var(--radius-card); color: var(--text-3); text-align: center; }
+/* An empty state is a sentence, not a container.
+   This was 32px of padding inside a dashed box — and dashed means drop zone in
+   this app, which is where the grouper's satellites wait to be placed. A dashed
+   border says something belongs here and is missing. On a one-satellite mission
+   nothing is missing: zero is the right answer and it is not going to change.
+   So it says so, quietly, at the size of every other explanatory line. */
+.empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 2px 0;
+  color: var(--text-4);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
 
 .rail {
   position: sticky;
@@ -3359,55 +3372,47 @@ textarea.log-input {
 .config-meta { margin: 2px 0 0; color: var(--text-4); font-size: 12px; }
 
 /* one flat grid so a launch cell can span the satellites on it */
-.config-table {
-  display: grid;
-  /* launch · satellite · orbit type · inclination · altitude · LTAN ·
-     window · ready to ship · mass · envelope
-     Proportional rather than a mix of fixed and fluid: fixed columns took
-     their width off the top and the leftovers all landed in the two fluid
-     ones, which bunched the three narrow numbers together and left holes on
-     either side. Shares keep the rhythm even at any width. */
-  grid-template-columns:
-    minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 0.7fr) minmax(0, 0.95fr)
-    minmax(0, 0.9fr) minmax(0, 0.6fr) minmax(0, 1.4fr) minmax(0, 0.95fr)
-    minmax(0, 0.7fr) minmax(0, 1.35fr);
-  align-items: baseline;
-  /* No column gap: each cell draws its own top border, and a gap has no cell
-     to draw in, so the rule came out segmented between columns. The spacing
-     lives inside the cells instead, where the border follows it. */
-  gap: 0;
-  font-size: 12.5px;
-}
-.config-th {
-  padding: 0 14px 4px 0;
+/* ── a configuration, as a small card ──
+   Five to a row rather than two. A configuration is a short thing — who flies
+   with whom, what that weighs, when it can go — and at full width it was that
+   short thing stretched across a page. Small enough to see every option at
+   once is the whole point: you are choosing between shapes, and you cannot
+   choose between things you have to scroll between. */
+/* No rules between launches and no gap worth the name: the numbered bullets
+   already say where one ends and the next begins, so a border was a second
+   answer to a question that had one. */
+/* the card's own 6px gap already separates this from the heading */
+.config-legs { display: grid; gap: 5px; }
+
+.config-leg { display: flex; gap: 7px; }
+
+/* a rocket and a number, because they answer different questions: what this row
+   is, and which one it is. The words "Launch 1" said both and cost the width of
+   half a card to do it. */
+.config-leg-n {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  margin-top: 0;
   color: var(--text-4);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
 }
-.config-td, .config-group { padding: 8px 14px 8px 0; border-top: 1px solid var(--hair); }
+.config-leg-rocket { display: flex; color: var(--text-3); }
+.config-leg.clash .config-leg-rocket { color: var(--danger-text); }
+.config-leg-no { font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.config-leg.clash .config-leg-n { color: var(--danger-text); }
 
+.config-leg-said { min-width: 0; }
 
-/* the merged cell: the grouping drawn rather than repeated on every row */
-.config-group {
-  grid-row: span var(--span, 1);
-  display: grid;
-  align-content: start;
-  gap: 2px;
-}
-.config-group-name { color: var(--text); font-weight: 600; }
-.config-group-mass { color: var(--text-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
-
-.config-sat { color: var(--text); font-weight: 500; }
-.config-orbit, .config-window, .config-ship, .config-ltan { color: var(--text-3); }
-.config-inc, .config-alt { color: var(--text-3); }
-.config-mass, .config-dims { color: var(--text-2); }
-.config-td.num { font-variant-numeric: tabular-nums; }
-.config-dims { white-space: nowrap; }
-.config-group.clash + .config-td ~ .config-td.config-window,
-.config-group.clash .config-group-name { color: var(--danger-text); }
-
+/* margin: 0, and it is not a nicety.
+   There is no global p reset in this sheet, so every paragraph in here was
+   carrying the browser's default 1em above and below it — about 46px per
+   launch, which swamped the 5px gaps the layout actually asks for. The card
+   was two thirds whitespace nobody had written. */
+.config-leg-who, .config-leg-says { margin: 0; }
+.config-leg-who { color: var(--text); font-size: 12px; font-weight: 500; line-height: 1.3; }
+.config-leg-says { color: var(--text-3); }
+.config-leg-says.clash { color: var(--danger-text); }
 
 /* the folded ends of a windowed path */
 .step-more { margin: 0; padding: 2px 0 2px 34px; list-style: none; }
@@ -3465,37 +3470,77 @@ textarea.log-input {
 }
 
 /* ranked by preference: first is favourite */
-.config-rank { display: grid; gap: 18px; }
-.config-rank > .config { position: relative; padding-left: 62px; }
-.config-rank > .config.lifted { opacity: .45; }
-.config-rank > .config.over { box-shadow: 0 -2px 0 0 var(--cyan); }
-.config-rank > .config.under { box-shadow: 0 2px 0 0 var(--cyan); }
-
-.rank-head { display: grid; gap: 2px; }
-.rank-head .panel-note { margin: 0; }
-
-.config-rank-tools {
-  position: absolute;
-  top: 15px;
-  left: 14px;
+/* Rank runs left to right, because the cards do. First is favourite, and that
+   is a reading order people already have. */
+/* auto-fill, not auto-fit: auto-fit collapses the empty tracks and the two
+   cards you have stretch across the whole row, which is the layout this was
+   meant to replace. auto-fill keeps the tracks, so a card stays card-sized
+   however few of them there are. */
+.config-rank {
   display: grid;
-  justify-items: center;
-  gap: 1px;
+  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+  gap: 8px;
+  align-items: start;
+  margin-top: 9px;
+}
+
+/* the card shrinks to match: the old padding was most of a 240px column */
+.config-rank > .config { padding: 9px 11px 10px; gap: 6px; }
+.config-rank > .config p { margin: 0; }
+.config-rank > .config .config-head { flex-wrap: wrap; gap: 6px; }
+.config-rank > .config .config-title { font-size: 13px; line-height: 1.2; }
+.config-rank > .config .config-meta { margin-top: 0; }
+
+/* One secondary size on a card, not three.
+   "3 launches · ready by Aug 2026" was 10.5px, "136 kg · Q3 2026 – Q4 2026" was
+   11px and "Needs Aurora-T to move..." was 12.5px — all of them the same tier of
+   thing, all of them drawn differently, which reads as a hierarchy that is not
+   there. 11px because 10.5 is under the size the line carrying mass and window
+   deserves. */
+.config-rank > .config .config-meta,
+.config-rank > .config .config-leg-says,
+.config-rank > .config .config-needs,
+.config-rank > .config .config-warn,
+.config-rank > .config .config-note,
+.config-rank > .config .cosmo-dismissed {
+  font-size: 11px;
+  line-height: 1.4;
+}
+.config-rank > .config .config-acts { gap: 5px; }
+/* the buttons shrink with the card rather than setting its width */
+.config-rank .config-acts .ghost { padding: 2px 7px; font-size: 11px; }
+.config-rank > .config.lifted { opacity: .45; }
+.config-rank > .config.over { box-shadow: -2px 0 0 0 var(--cyan); }
+.config-rank > .config.under { box-shadow: 2px 0 0 0 var(--cyan); }
+
+
+
+/* a strip across the top of the card rather than a column beside it: a column
+   cost 62px of width, which a 290px card cannot spare */
+.config-rank-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   cursor: grab;
 }
+/* the actions ride on this strip, pushed right, on every kind of card */
+.config-rank-tools .config-acts { margin-left: auto; cursor: default; }
+/* a suggestion has no rank to drag, so the strip is not a handle */
+.config-rank-tools.plain { cursor: default; }
+.config-rank-tools .config-from { margin-left: 0; }
 .config-rank-tools:active { cursor: grabbing; }
 .config-grip { display: block; color: var(--text-4); }
 .config-rank > .config:hover .config-grip { color: var(--text-3); }
 .config-rank-n {
-  padding-bottom: 1px;
+  margin-right: auto;
   color: var(--text-2);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .config-rank-btn {
-  width: 22px;
-  height: 20px;
+  width: 19px;
+  height: 18px;
   padding: 0;
   border: 1px solid transparent;
   border-radius: 5px;
@@ -3509,6 +3554,11 @@ textarea.log-input {
 .config-rank-btn:disabled { opacity: .28; cursor: default; }
 
 /* your own line about a shape you have chosen */
+/* The note starter stays visible rather than appearing on hover: revealing it
+   would change the card's height, and in a grid row that shoves its neighbours
+   about every time the pointer crosses one. It earns its line by being small. */
+.config-rank .cosmo-dismissed { margin-top: 2px; }
+
 .config-note {
   display: flex;
   align-items: baseline;
@@ -3696,18 +3746,23 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
 
 /* Cosmo's suggestions, fenced off from the groupings you made yourself. The
    star says who once, at the top, so no card has to repeat it. */
-.cosmo-box {
-  display: grid;
-  gap: 12px;
-  padding: 16px 18px 18px;
-  border: 1px solid var(--accent-ring);
-  border-radius: 14px;
-  background: var(--accent-soft);
+/* Cosmo's shapes sit in the same row as your own, so what used to be said once
+   by a box around them is now said by the card: this tint, and the star below.
+   Pressing Add is then visible — the card loses Cosmo's colour as it moves to
+   the front of the row, because it has stopped being Cosmo's. */
+.config.from-cosmo { background: var(--accent-soft); border-color: var(--accent-ring); }
+
+.config-from {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 7px;
+  color: var(--cyan);
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
 }
-/* Nested and lighter read as nearer the front, which put Cosmo's proposals
-   above the shapes actually committed to. Its cards recede instead. */
-.cosmo-box .config { background: transparent; border-color: var(--line); }
-.cosmo-box .empty { margin: 0; }
+.config-from-star { display: inline-flex; }
 .cosmo-box-head { display: flex; align-items: center; gap: 7px; }
 .cosmo-box-star { display: inline-flex; color: var(--cyan); }
 .cosmo-box-title, .cosmo-box-sub {
@@ -3722,23 +3777,8 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
 
 
 @media (max-width: 900px) {
-  /* A heading row cannot survive a wrapping grid, and a merged cell cannot
-     span rows that are no longer in one. Below this width the table unpicks
-     itself into one block per satellite, each cell carrying its own label. */
-  .config-th { display: none; }
-  .config-table { grid-template-columns: 1fr 1fr; gap: 10px 12px; }
-  .config-group { grid-row: auto; grid-column: 1 / -1; grid-auto-flow: column; justify-content: start; gap: 10px; }
-  .config-td { display: grid; gap: 1px; }
-  .config-td::before {
-    content: attr(data-label);
-    color: var(--text-4);
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-  }
-  .config-sat { grid-column: 1 / -1; }
-  .config-dims { white-space: normal; }
+  /* The cards already stack themselves — auto-fit drops to one column when
+     290px no longer fits twice — so there is nothing here to unpick. */
   .config-warn, .config-needs { margin-left: 0; }
 
   .config-intro { flex-direction: column; align-items: stretch; gap: 12px; }
@@ -3844,7 +3884,6 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
 .offer-name .offer-top { font-weight: 600; }
 /* one fact per column, so the eye can read straight down */
 .offer-row > td { white-space: nowrap; }
-.offer-row > td:nth-child(4) { white-space: normal; }
 /* an offer that fits none of the shapes you said you would accept */
 .offer-flag {
   display: inline-block;
@@ -3869,3 +3908,497 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
 .offer-acts .ghost.small { width: auto; margin: 0 0 4px 6px; }
 
 
+
+
+/* ─── the whole listing, one row ──────────────────────────────────────────── */
+/* Thirty columns, scrolling sideways, because reading down a column is the
+   comparison — "Testing" says +$41k, +$50k, not offered. */
+.wide-table { min-width: 2600px; }
+.wide-table th, .wide-table td { white-space: nowrap; }
+
+/* a family name over each run of columns, or thirty headings read as a wall */
+.wide-groups th { padding-bottom: 2px; }
+.wide-group {
+  border-bottom: 1px solid var(--line);
+  color: var(--text-3) !important;
+  font-size: 10px !important;
+}
+
+/* the name stays put while the rest scrolls under it */
+.wide-name { position: sticky; left: 0; z-index: 1; background: var(--table-bg, var(--surface)); font-weight: 600; }
+.wide-table thead th:first-child { position: sticky; left: 0; z-index: 2; background: var(--table-bg, var(--surface)); }
+
+/* what is in the price, and what is not, in one column */
+.wide-services { white-space: normal !important; min-width: 20rem; }
+.wide-top { display: block; color: var(--cyan); }
+.wide-under { display: block; margin-top: 2px; color: var(--text-4); font-size: 11.5px; }
+
+/* ─── Matches: stage without a board ─────────────────────────────────────── */
+/* A kanban would scatter these rows sideways and cost the reading down a
+   column that the wide table exists for, so the stage is carried three
+   other ways: a strip of counts, a heading per run, and a pill in the one
+   column that never scrolls away. */
+
+.stage-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.stage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 9px 4px 11px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.stage-chip:hover { background: var(--hover-wash); }
+.stage-chip.on {
+  border-color: var(--accent-ring);
+  background: var(--accent-soft);
+  color: var(--cyan);
+}
+
+/* An empty stage is kept and greyed, never hidden: "Requested 0" is the
+   sentence "you have matched five and asked none of them for anything", which
+   is most of the reason to read this strip at all. */
+.stage-chip.none { opacity: 0.45; cursor: default; }
+.stage-chip.none:hover { background: transparent; }
+
+.stage-chip-count {
+  min-width: 17px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+.stage-chip.on .stage-chip-count { background: var(--surface); color: var(--cyan); }
+
+/* the grouping toggle sits away from the filters, because it does not filter */
+.stage-group-toggle {
+  margin-left: auto;
+  padding: 4px 10px;
+  border: 1px solid var(--hair);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.stage-group-toggle:hover { background: var(--hover-wash); color: var(--text-2); }
+.stage-group-toggle.on { border-color: var(--accent-ring); color: var(--cyan); }
+
+/* under the listing name, so it survives three thousand pixels of scrolling */
+.stage-pill {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-4);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.stage-pill.requested { color: var(--cyan); }
+.stage-pill.documents { color: var(--cyan); }
+.stage-pill.in-procurement { color: var(--text-3); }
+
+/* a heading per run of rows: the board's information, in the table's shape */
+.stage-head td { padding: 0 !important; border-bottom: 1px solid var(--line-strong) !important; }
+.stage-head-inner {
+  position: sticky;
+  left: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: max-content;
+  padding: 14px 0 6px;
+}
+.stage-head-name {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.stage-head-count {
+  min-width: 17px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+.stage-head-note { color: var(--text-4); font-size: 11.5px; }
+
+/* filtering hides rows, so it says how many it hid */
+.stage-filtered { margin-top: 10px; color: var(--text-4); font-size: 12px; }
+
+/* ─── Cosmo, brokering ────────────────────────────────────────────────────── */
+/* A proposal, not a notification. It has a face and a name on it because
+   something that asks a stranger on your behalf should be answerable for it,
+   and it carries its own off switch for the same reason. */
+
+.cosmo-card {
+  margin-bottom: 18px;
+  padding: 16px 18px 14px;
+  border: 1px solid var(--accent-ring);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.cosmo-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.cosmo-card-face { display: flex; color: var(--cyan); }
+.cosmo-card-face svg { width: 26px; height: 26px; }
+.cosmo-card-who { color: var(--text); font-size: 13px; font-weight: 600; }
+
+.cosmo-card-lede { color: var(--text); font-size: 15.5px; font-weight: 600; }
+.cosmo-card-sub { margin-top: 2px; color: var(--text-3); font-size: 12.5px; }
+
+/* every line is a field, so they read as a list of facts rather than a pitch */
+.cosmo-why { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.cosmo-why li {
+  position: relative;
+  padding-left: 15px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+.cosmo-why li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--cyan);
+}
+
+.cosmo-card-tools { display: flex; gap: 8px; margin-top: 14px; }
+.cosmo-card-quiet { margin-top: 10px; color: var(--text-4); font-size: 12px; }
+
+/* the off switch sits on the thing it switches off, never in settings */
+.cosmo-off {
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-4);
+  font: inherit;
+  font-size: 11.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.cosmo-off:hover { color: var(--text-3); }
+
+/* ── the draft, opened in place ── */
+.cosmo-draft { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--accent-ring); }
+.cosmo-draft-title {
+  margin-bottom: 8px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* each ask says why it is being asked, drawn from the blank cell that prompted it */
+.cosmo-asks { display: grid; gap: 7px; margin-bottom: 16px; }
+.cosmo-ask { display: flex; align-items: baseline; gap: 9px; cursor: pointer; }
+.cosmo-ask input { margin: 0; accent-color: var(--cyan); }
+.cosmo-ask-said { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; }
+.cosmo-ask-what { color: var(--text); font-size: 13px; }
+.cosmo-ask-why { color: var(--text-4); font-size: 12px; }
+
+.cosmo-note {
+  padding: 13px 15px;
+  border: 1px solid var(--hair);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.cosmo-note p + p { margin-top: 9px; }
+
+/* which words are the record's and which are Cosmo's, visible without asking */
+.cosmo-sourced { color: var(--cyan); }
+.cosmo-key { margin-top: 7px; color: var(--text-4); font-size: 11.5px; }
+
+.cosmo-note-edit {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid var(--accent-ring);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.cosmo-draft-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+/* ─── Messages ────────────────────────────────────────────────────────────── */
+/* Two panes. A thread list that replaces itself with the conversation loses the
+   one thing a list is for: seeing that three other people are waiting too. */
+
+.inbox {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.thread-list {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.thread {
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--hair);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.thread:last-child { border-bottom: 0; }
+.thread:hover { background: var(--hover-wash); }
+.thread.on { background: var(--accent-soft); }
+
+.thread-top { display: flex; align-items: center; gap: 7px; }
+.thread-who { color: var(--text); font-size: 13.5px; font-weight: 600; }
+.thread-when { margin-left: auto; color: var(--text-4); font-size: 11.5px; }
+
+/* a dot, not a count: one thread is either waiting or it is not */
+.thread-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); }
+
+.thread-about { color: var(--text-3); font-size: 12px; }
+
+/* two lines of the last message, so you can tell threads apart without opening */
+.thread-snip {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--text-4);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.thread-foot { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.thread-foot .stage-pill { margin-top: 0; }
+.thread-turn {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--cyan);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+/* ── the conversation ── */
+.convo {
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.convo-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--hair);
+}
+.convo-who { color: var(--text); font-size: 15px; font-weight: 600; }
+.convo-sub { margin-top: 2px; color: var(--text-3); font-size: 12.5px; }
+.convo-head .ghost { margin-left: auto; flex: none; }
+
+.convo-body { display: grid; gap: 16px; padding: 18px; }
+
+.note { display: grid; gap: 5px; }
+.note-head { display: flex; align-items: center; gap: 7px; }
+.note-mark { display: flex; color: var(--cyan); }
+.note-who { color: var(--text-2); font-size: 12px; font-weight: 600; }
+.note-when { color: var(--text-4); font-size: 11.5px; }
+.note-text {
+  padding: 11px 14px;
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  background: var(--table-bg, var(--background));
+  color: var(--text-2);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+/* yours reads as yours without colour-coding the whole bubble */
+.note.from-you .note-text { border-color: var(--accent-ring); background: var(--accent-soft); }
+
+/* who wrote it survives the day it was written; in six months that is the question */
+.note-sent { color: var(--text-4); font-size: 11.5px; }
+
+.convo-form { padding: 0 18px 18px; }
+.convo-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  background: var(--table-bg, var(--background));
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.55;
+  resize: vertical;
+}
+.convo-input:focus { border-color: var(--accent-ring); outline: none; }
+.convo-tools { display: flex; align-items: center; gap: 10px; margin-top: 9px; }
+.convo-quiet { color: var(--text-4); font-size: 11.5px; }
+
+/* ── email sync ── */
+.sync {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--accent-ring);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+.sync-title { color: var(--text); font-size: 14px; font-weight: 600; }
+.sync-note { margin-top: 4px; max-width: 62ch; color: var(--text-3); font-size: 12.5px; line-height: 1.5; }
+
+.sync-switch { display: flex; align-items: center; gap: 9px; margin-top: 13px; color: var(--text); font-size: 13px; cursor: pointer; }
+.sync-switch input { margin: 0; accent-color: var(--cyan); }
+
+.sync-choices { display: grid; gap: 7px; margin-top: 12px; padding-left: 2px; }
+.sync-choice { display: flex; align-items: baseline; gap: 9px; cursor: pointer; }
+.sync-choice input { margin: 0; accent-color: var(--cyan); }
+.sync-choice-said { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; }
+.sync-choice-what { color: var(--text); font-size: 13px; }
+.sync-choice-why { color: var(--text-4); font-size: 12px; }
+
+.sync-reply { margin-top: 11px; color: var(--text-3); font-size: 12px; }
+.sync-demo { margin-top: 11px; color: var(--text-4); font-size: 11.5px; }
+
+@media (max-width: 860px) {
+  .inbox { grid-template-columns: 1fr; }
+}
+
+/* ─── the path, folded into its phases ────────────────────────────────────── */
+/* Seventeen steps at once reads as "this will take for ever". Four ticked rows
+   and one open section reads as "here is the road, and here is where we are." */
+
+.phase-path { display: grid; }
+
+.phase { border-bottom: 1px solid var(--hair); }
+.phase:last-child { border-bottom: 0; }
+
+.phase-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 15px 2px;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.phase-head:hover { background: var(--hover-wash); }
+
+/* a tick for done, a ring for where you are, an empty circle for the rest */
+.phase-mark {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--surface);
+  font-size: 11px;
+  font-weight: 700;
+}
+.phase.done .phase-mark { border-color: var(--cyan); background: var(--cyan); }
+.phase.current .phase-mark { border-color: var(--cyan); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.phase-name { color: var(--text); font-size: 14.5px; font-weight: 600; }
+.phase.next .phase-name { color: var(--text-3); font-weight: 500; }
+
+/* pushed right, and the count last, so the eye runs name → state → size */
+.phase-meta { margin-left: auto; color: var(--text-3); font-size: 12.5px; }
+.phase.current .phase-meta { color: var(--cyan); }
+.phase-count { min-width: 5.5rem; color: var(--text-4); font-size: 12px; text-align: right; }
+.phase-chevron { width: 14px; color: var(--text-4); font-size: 12px; text-align: center; }
+
+.phase .step-list { padding-bottom: 8px; }
+
+@media (max-width: 640px) {
+  .phase-count { display: none; }
+}
+
+/* the satellite mark, beside every name in the satellites table */
+.sat-mark { display: inline-flex; flex: none; margin-right: 8px; color: var(--text-4); }
+.sat-name { display: flex; align-items: center; }
+/* while editing, the input shares the cell with the mark */
+.editing-record .sat-name input { min-width: 0; }
+
+/* the note editor, sized for a card rather than for the page
+   It borrows .log-input from the Activity composer, which is a full-width box
+   with a 56px floor and 14px type — fine across 1400px, absurd across 238. */
+.config-rank textarea.log-input {
+  min-height: 32px;
+  padding: 2px 0 4px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.config-rank .config-note-edit { gap: 4px; padding-top: 2px; }
+
+/* two words, weighted for what they do: saving a private note is not the
+   loudest thing on this page and should not look like it */
+/* A button that reads as text.
+   The class was used in two places and never defined, so both fell through to
+   the browser's default button chrome — a grey border and a grey fill, which is
+   the opposite of what the name promises. */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.link-button:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: 3px; }
+
+.note-tools { display: flex; gap: 12px; }
+.note-tools .link-button { font-size: 11px; }
+.note-save { color: var(--cyan); font-weight: 600; }
+.note-cancel { color: var(--text-4); }
+.note-cancel:hover { color: var(--text-3); }
+
+/* the mark on the editor's fold heading, between the caret and the name */
+/* the fold aligns its text on the baseline, and an SVG's baseline is its bottom
+   edge — so the mark rides high unless it is centred against the row instead */
+.sat-fold .sat-mark { align-self: center; margin: 0 2px 0 4px; }
