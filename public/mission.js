@@ -11,7 +11,7 @@
 // track would have to lie about one of them.
 import { MISSION_ROWS, LISTINGS, SERVICES } from './demo-data.js';
 import { COUNTRIES, EXPORT_CONTROL, RIDE_PREFERENCES, FLEXIBILITY, quarterRank } from './mission-options.js';
-import { satelliteTable, satelliteEditor } from './satellite-table.js';
+import { satelliteTable, satelliteEditor, SATELLITE } from './satellite-table.js';
 import { assistant, toggleAssistant, STAR, PORTRAIT } from './assistant.js';
 import { accountMenu, currentUser } from './account-menu.js';
 import { themeToggle } from './theme.js';
@@ -1545,8 +1545,10 @@ function batchFacts(names) {
 // question being asked, which is simply which launch each satellite is on.
 function grouper(draft, onDone) {
   const card = el('section', 'config config-editor');
-  card.append(el('h4', 'cosmo-box-sub', 'Put each satellite on a launch'));
 
+  // No heading. "Put each satellite on a launch" was the instruction given a
+  // third time — the tray below says "not on a launch, 3 to place" while sitting
+  // against the chips it is talking about, which is the version that works.
   const body = el('div', 'grouper');
   card.append(body);
 
@@ -1554,7 +1556,14 @@ function grouper(draft, onDone) {
 
   // A chip that can be picked up, and can also be moved without a pointer.
   const chipFor = (at, where) => {
-    const chip = el('span', 'grouper-sat', row.satellites[at].name);
+    const chip = el('span', 'grouper-sat');
+
+    // The same mark the satellites table carries. These chips are the rows of
+    // that table made draggable, and a chip that is about to be dropped into a
+    // rocket should look like the thing the rocket will be carrying.
+    const mark = el('span', 'sat-mark');
+    mark.innerHTML = SATELLITE;
+    chip.append(mark, document.createTextNode(row.satellites[at].name));
     chip.draggable = true;
     chip.addEventListener('dragstart', event => {
       lifting = at;
@@ -1601,14 +1610,12 @@ function grouper(draft, onDone) {
 
     // Everything starts here and nothing is grouped until you group it.
     const tray = el('div', `grouper-tray${waiting.length ? '' : ' done'}`);
-    const trayHead = el('div', 'grouper-bin-head');
-    trayHead.append(
+    tray.append(
       el('span', 'grouper-bin-name', 'Not on a launch'),
       el('span', 'grouper-bin-facts', waiting.length
         ? `${waiting.length} to place`
         : 'all placed'),
     );
-    tray.append(trayHead);
 
     const trayChips = el('div', 'grouper-chips');
     for (const at of waiting) trayChips.append(chipFor(at, null));
@@ -1618,6 +1625,18 @@ function grouper(draft, onDone) {
     tray.append(trayChips);
     asTarget(tray, null);
     body.append(tray);
+
+    // Launches side by side, not stacked.
+    //
+    // The question this editor asks is which satellites go on which launch, and
+    // that is a left-to-right comparison. As full-width bands each empty launch
+    // was ninety pixels of nothing and three of them meant scrolling; as columns
+    // you drag sideways between them and the whole editor fits on a screen.
+    //
+    // It also previews the result: a saved configuration is a card whose
+    // launches you read in order, so building it in columns looks like what it
+    // is going to become.
+    const rail = el('div', 'grouper-rail');
 
     let blocked = false;
 
@@ -1629,12 +1648,7 @@ function grouper(draft, onDone) {
 
       const bin = el('div', `grouper-bin${facts?.clash ? ' clash' : ''}`);
       const head = el('div', 'grouper-bin-head');
-      head.append(
-        el('span', 'grouper-bin-name', `Launch ${index + 1}`),
-        el('span', 'grouper-bin-facts', facts
-          ? `${facts.mass} kg · ${facts.clash ? 'no shared window' : facts.window}`
-          : 'nothing on it yet'),
-      );
+      head.append(el('span', 'grouper-bin-name', `Launch ${index + 1}`));
 
       // Removing a launch never leaves a satellite nowhere: its passengers go
       // back to the tray, where they are visibly still to be placed.
@@ -1655,6 +1669,14 @@ function grouper(draft, onDone) {
       head.append(drop);
       bin.append(head);
 
+      // Only once it carries something. An empty launch saying "empty" above
+      // "Drag here" is the same fact twice, and the second one is the useful
+      // half because it also says what to do about it.
+      if (facts) {
+        bin.append(el('span', 'grouper-bin-facts',
+          `${facts.mass} kg · ${facts.clash ? 'no shared window' : facts.window}`));
+      }
+
       const chips = el('div', 'grouper-chips');
       for (const at of on) chips.append(chipFor(at, index));
 
@@ -1665,13 +1687,14 @@ function grouper(draft, onDone) {
         .map((satellite, at) => ({ name: satellite.name, at }))
         .filter(({ at }) => draft.assign[at] !== index);
 
-      if (!names.length) {
-        chips.append(el('span', 'grouper-empty', 'Drag satellites here'));
-      }
+      bin.append(chips);
+
+      const ways = el('div', 'grouper-ways');
+      if (!names.length) ways.append(el('span', 'grouper-empty', 'Drag here, or'));
 
       if (elsewhere.length) {
         const add = el('select', 'grouper-add');
-        const prompt = el('option', null, names.length ? '+ Add' : 'or pick one');
+        const prompt = el('option', null, '+ Add');
         prompt.value = '';
         add.append(prompt);
         for (const { name, at } of elsewhere) {
@@ -1685,9 +1708,9 @@ function grouper(draft, onDone) {
           draft.assign[Number(add.value)] = index;
           paint();
         });
-        chips.append(add);
+        ways.append(add);
       }
-      bin.append(chips);
+      if (ways.childElementCount) bin.append(ways);
 
       if (facts?.clash) {
         bin.append(el('p', 'config-warn',
@@ -1695,28 +1718,44 @@ function grouper(draft, onDone) {
       }
 
       asTarget(bin, index);
-      body.append(bin);
+      rail.append(bin);
     }
 
-    const more = el('button', 'ghost small', '+ Add a launch');
+    // The last tile, not a band of its own. "Add another launch" belongs beside
+    // the launches, and in the rail it costs no height at all.
+    const more = el('button', 'grouper-more', '+ Add a launch');
     more.type = 'button';
     more.addEventListener('click', () => { draft.extra = launches + 1; paint(); });
-    body.append(more);
+    rail.append(more);
 
-    const why = blocked
+    body.append(rail);
+
+    // Red is for something gone wrong, and nothing has. Opening the editor and
+    // being told off for not having finished is a scolding, not a hint: the
+    // count is a fact and reads as one, right up until a grouping cannot fly.
+    const stop = blocked
       ? 'One launch has no overlapping launch window. Move something before saving.'
-      : waiting.length ? `Put ${waiting.length === 1 ? 'the last satellite' : `all ${waiting.length}`} on a launch to save.`
-      : !launches ? 'Add a launch and put the satellites on it.'
       : '';
-    if (why) body.append(el('p', 'hint warn', why));
-    save.disabled = Boolean(why);
+    // The count is already on the tray, against the chips it counts. Repeating
+    // it here said the same number twice and bought a line to do it, so what is
+    // left is only what the tray cannot say.
+    const note = stop || (!launches ? 'Add a launch and put the satellites on it.' : '');
+    says.replaceChildren();
+    if (note) says.append(el('p', `hint${stop ? ' warn' : ''}`, note));
+    save.disabled = Boolean(stop) || Boolean(waiting.length) || !launches;
   };
 
-  const tools = el('div', 'log-tools');
+  const tools = el('div', 'log-tools grouper-foot');
+  const says = el('div', 'grouper-says');
+  tools.append(says);
   const cancel = el('button', 'ghost', 'Cancel');
   cancel.type = 'button';
   cancel.addEventListener('click', () => onDone(null));
-  const save = el('button', 'submit compact', 'Save grouping');
+  // "configuration", not "grouping". The object is called a configuration on
+  // the heading above it, on the button that opened this editor, and on every
+  // card it will sit beside — and a Save button should name what it produces.
+  // Grouping stays as the verb, which is what Regroup does.
+  const save = el('button', 'submit compact', 'Save configuration');
   save.type = 'button';
   save.addEventListener('click', () => onDone({ batches: batchesOf(draft) }));
   tools.append(cancel, save);

@@ -3626,8 +3626,23 @@ textarea.log-input {
 .panel-heading .tab-count { margin-left: 8px; letter-spacing: 0; text-transform: none; vertical-align: 0; }
 
 /* building one by hand */
-.config-editor { border-color: var(--accent-ring); }
-.grouper { display: grid; gap: 12px; }
+/* the editor carries less padding than a card, because it is a work surface
+   rather than something to read */
+.config-editor { border-color: var(--accent-ring); padding: 11px 13px 12px; gap: 8px; }
+.grouper { display: grid; gap: 7px; justify-items: start; }
+.grouper-foot { display: flex; align-items: center; gap: 12px; width: 100%; }
+.grouper-says { flex: 1; min-width: 0; }
+.grouper-says .hint { margin: 0; }
+.grouper > .grouper-tray, .grouper > .grouper-rail, .grouper > .hint { justify-self: stretch; }
+/* one line: label, count, then the chips themselves */
+.grouper-tray {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding: 6px 10px !important;
+}
+.grouper-tray .grouper-chips { flex: 1; }
 
 /* everything waits here until it is placed on a launch */
 .grouper-tray {
@@ -3640,19 +3655,51 @@ textarea.log-input {
 .grouper-tray.taking, .grouper-bin.taking { border-color: var(--cyan); border-style: solid; }
 .grouper-empty { color: var(--text-4); font-size: 12.5px; }
 
+/* Launches run across, not down.
+   Which satellites go on which launch is a left-to-right comparison, and as
+   full-width bands each empty launch was ninety pixels of nothing. As columns
+   you drag sideways between them, and the editor fits on a screen. */
+.grouper-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+
+/* the tile that makes another launch — solid, not dashed, because dashed means
+   drop zone here and this one creates rather than receives */
+.grouper-more {
+  min-height: 58px;
+  padding: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.grouper-more:hover { border-color: var(--cyan); color: var(--cyan); }
+
 /* a launch is a box you can see, so adding one is visibly something */
 .grouper-bin {
-  padding: 10px 14px 12px;
+  display: grid;
+  gap: 4px;
+  min-height: 58px;
+  padding: 7px 10px 8px;
   border: 1px solid var(--hair);
   border-radius: 10px;
   background: var(--surface);
+  align-content: start;
 }
 .grouper-bin.clash { border-color: var(--danger); }
-.grouper-bin-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 8px; }
+.grouper-bin-head { display: flex; align-items: center; gap: 10px; }
+.grouper-tray .grouper-bin-head { padding-bottom: 8px; }
 .grouper-drop {
   margin-left: auto;
-  width: 22px;
-  height: 22px;
+  width: 19px;
+  height: 19px;
   padding: 0;
   border: 0;
   border-radius: 6px;
@@ -3670,7 +3717,7 @@ textarea.log-input {
   letter-spacing: .06em;
   text-transform: uppercase;
 }
-.grouper-bin-facts { color: var(--text-4); font-size: 12px; }
+.grouper-bin-facts { color: var(--text-4); font-size: 11px; line-height: 1.35; }
 .grouper-bin.clash .grouper-bin-facts { color: var(--danger-text); }
 
 /* what is on this launch, as objects rather than lines of text */
@@ -3679,7 +3726,7 @@ textarea.log-input {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 6px 5px 12px;
+  padding: 3px 5px 3px 9px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
@@ -3689,7 +3736,10 @@ textarea.log-input {
   white-space: nowrap;
   cursor: grab;
 }
-.grouper-tray .grouper-sat { padding-right: 12px; }
+.grouper-tray .grouper-sat { padding-right: 9px; }
+/* "drag here" and the picker are one line: both answer "how do I fill this" */
+.grouper-ways { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.grouper-bin .grouper-empty { font-size: 11.5px; }
 .grouper-sat:active { cursor: grabbing; }
 .grouper-sat.lifted { opacity: .4; }
 .grouper-off {
@@ -4402,3 +4452,7 @@ select.grouper-add:hover { border-color: var(--field-hover); color: var(--text);
 /* the fold aligns its text on the baseline, and an SVG's baseline is its bottom
    edge — so the mark rides high unless it is centred against the row instead */
 .sat-fold .sat-mark { align-self: center; margin: 0 2px 0 4px; }
+
+/* the mark on a draggable satellite chip, sized down to sit inside a pill */
+.grouper-sat .sat-mark { margin-right: 5px; }
+.grouper-sat .sat-mark svg { width: 15px; height: 15px; }
